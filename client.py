@@ -6,12 +6,11 @@ from mcp import Tool
 
 # In-memory server (ideal for testing)
 server = FastMCP("TestServer")
-client = Client(server)
 
 # HTTP server
-
+client = Client("http://127.0.0.1:8000/mcp")
 # Local Python script
-client = Client("main.py")
+# client = Client("main.py")
 
 
 async def main():
