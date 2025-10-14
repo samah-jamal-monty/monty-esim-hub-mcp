@@ -8,7 +8,7 @@ from mcp import Tool
 server = FastMCP("TestServer")
 
 # HTTP server
-client = Client("http://127.0.0.1:8000/mcp")
+client = Client("https://monty-esim-hub-mcp.onrender.com/mcp")
 # Local Python script
 # client = Client("main.py")
 

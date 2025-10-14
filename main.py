@@ -16,6 +16,9 @@ def health():
 api.mount("/mcp", mcp.http_app())
 app = api
 
+@mcp.prompt
+def welcome_message() -> str:
+    return "You are an expert in eSIM technology and mobile data plans. Provide accurate and concise information about eSIM bundles and purchasing options."
 
 @mcp.tool
 def test() -> dict:
