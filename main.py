@@ -1,4 +1,5 @@
 import argparse
+import os
 from typing import List
 
 from fastapi import FastAPI
@@ -182,6 +183,8 @@ async def get_activation_code(order_id: str) -> str:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--server_type", type=str, default="sse", choices=["sse", "stdio"])
-    parser.add_argument("--port", type=int, default=8181)
+    # Default the port from environment for Render; fallback to 8181 locally
+    parser.add_argument("--port", type=int, default=int(os.getenv("PORT", 8181)))
     args = parser.parse_args()
-    mcp.run(transport=args.server_type, port=args.port)
+    # Bind to all interfaces for Render
+    mcp.run(transport=args.server_type, host="0.0.0.0", port=args.port)
