@@ -66,7 +66,7 @@ class EsimHubService:
             logger.error(f"Failed to fetch bundles: {response.status_code} {response.text}")
             return []
 
-    async def purchase_bundle(self, bundle_code: str) -> bool:
+    async def purchase_bundle(self, bundle_code: str, user_email: str) -> dict:
         url = f"{self.__mm_hub_url}{EsimHubEndpoint.API_CREATE_RESELLER_ORDER}"
         request_body = {
             "BundleGuid": bundle_code,
@@ -75,7 +75,7 @@ class EsimHubService:
             "ServiceTag": "ESIM",
             "PhoneNumber": "",
             "ClientName": "",
-            "Email": "",
+            "Email": user_email,
             "PaymentMethod": "MCP",
             "DiscountAmount": None,
             "DiscountRate": None,
@@ -88,5 +88,20 @@ class EsimHubService:
             logger.info(f"response: {response.status_code} {response.text}")
         if response.status_code != 200:
             logger.error(f"Failed to purchase bundle {bundle_code}: {response.status_code} {response.text}")
-            return False
-        return True
+            return {"success": False, "error": response.text}
+        return {"success": True, "response": response.json()}
+
+    async def get_activation_code(self, order_id: str) -> str | None:
+        url = f"{self.__mm_hub_url}{EsimHubEndpoint.API_GET_ACTIVATION_CODE}"
+        params = {
+            "orderId": order_id
+        }
+        logger.info(f"getting activation code for order {order_id} at {url}")
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url=url, headers=self.__headers, params=params)
+            logger.info(f"response: {response.status_code} {response.text}")
+        if response.status_code != 200:
+            logger.error(f"Failed to get activation code for order {order_id}: {response.status_code} {response.text}")
+            return None
+        data = response.json()
+        return data.get("data", {}).get("activationCode")
