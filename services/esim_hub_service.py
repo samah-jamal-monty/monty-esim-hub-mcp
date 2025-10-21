@@ -30,6 +30,7 @@ class EsimHubEndpoint(StrEnum):
     API_CREATE_RESELLER_TOPUP = "/core/api/v1/order/topup"
     API_CREATE_RESELLER_ORDER = "/core/api/v1/order/create"
     API_GET_ACTIVATION_CODE = "/core/api/v1/order/activation-code"
+    API_GET_ORDER_HISTORY = "/core/api/v1/order/get-order-history"
 
     API_CHECK_BUNDLE_APPLICABLE = "/core/api/v1/order/check-bundle-availability"
 
@@ -105,3 +106,21 @@ class EsimHubService:
             return None
         data = response.json()
         return data.get("data", {}).get("activationCode")
+
+    async def get_order_history(self, user_email: str, page_index=1, page_size=10) -> List[dict]:
+        url = f"{self.__mm_hub_url}{EsimHubEndpoint.API_GET_ORDER_HISTORY}"
+        logger.info(
+            f"getting order history from {url} for user {user_email} with page_index={page_index} and page_size={page_size}")
+        params = {
+            "email": user_email,
+            "pageIndex": page_index,
+            "pageSize": page_size,
+        }
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url=url, headers=self.__headers, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            return data["data"]["orders"]
+        else:
+            logger.error(f"Failed to fetch order history: {response.status_code} {response.text}")
+            return []

@@ -18,8 +18,8 @@ def health():
 
 
 # Mount MCP HTTP transport on /mcp instead of /
-api.mount("/mcp", mcp.http_app())
-app = api
+# api.mount("/mcp", mcp.http_app())
+# app = api
 
 
 @mcp.prompt
@@ -52,6 +52,9 @@ def user_journey() -> str:
         "     • Construct 'activation_url' = LPA:1$<SMDP+>$<ACTIVATION_CODE>.\n"
         "     • Call 'send_activation_url_via_email(user_email, activation_url)'.\n"
         "5) Confirm to the user that the activation details have been emailed (provide a brief summary without exposing sensitive data).\n"
+        "6) Remind the user to check their email (including spam/junk folder) for the activation details.\n"
+        "7) For the order history, use 'get_order_history(user_email)' to fetch past orders associated with the email.\n"
+        "8) Show only the order summary (orderId, bundleCode, purchaseDate, smdp address and activation code if found in the response) without sensitive details.\n"
         "Always validate the email format before using it."
     )
 
@@ -180,11 +183,20 @@ async def get_activation_code(order_id: str) -> str:
     return await service.get_activation_code(order_id)
 
 
+@mcp.tool
+async def get_order_history(user_email: str) -> List[dict]:
+    """Get order history for a given user email."""
+    from config.utils import esim_hub_service_instance
+    service = esim_hub_service_instance()
+    return await service.get_order_history(user_email)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--server_type", type=str, default="sse", choices=["sse", "stdio"])
+    parser.add_argument("--server_type", type=str, default="sse", choices=["sse", "stdio", "http", "stream"])
     # Default the port from environment for Render; fallback to 8181 locally
     parser.add_argument("--port", type=int, default=int(os.getenv("PORT", 8181)))
     args = parser.parse_args()
+
     # Bind to all interfaces for Render
     mcp.run(transport=args.server_type, host="0.0.0.0", port=args.port)

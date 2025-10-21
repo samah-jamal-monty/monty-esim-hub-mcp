@@ -59,6 +59,13 @@ esim-hub-mcp/
    ESIM_MM_HUB_API_URL=https://mm-hub-api-software-qa.montylocal.net
    ESIM_DIGITAL_SERVICE_URL=https://digital-services-api-software-qa.montylocal.net
    ESIM_HUB_TENANT_KEY=your_tenant_key_here
+   SMTP_SERVER=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USE_TLS=true
+   SMTP_USERNAME=your_username
+   SMTP_PASSWORD=your_password
+   SMTP_SENDER=noreply@yourdomain.com
+   SMTP_SENDER_NAME=Esim Support
    ```
 
 ## Environment Variables
@@ -69,15 +76,22 @@ esim-hub-mcp/
 | `ESIM_MM_HUB_API_URL` | Base URL for MM Hub API | Yes |
 | `ESIM_DIGITAL_SERVICE_URL` | Base URL for Digital Services API | Yes |
 | `ESIM_HUB_TENANT_KEY` | Tenant key for multi-tenant access | Yes |
+| `SMTP_SERVER` | SMTP server hostname | Yes (for email) |
+| `SMTP_PORT` | SMTP port (587 or 465) | Yes (for email) |
+| `SMTP_USE_TLS` | Use SSL/TLS (true/false) | Yes (for email) |
+| `SMTP_USERNAME` | SMTP username | Yes (for email) |
+| `SMTP_PASSWORD` | SMTP password | Yes (for email) |
+| `SMTP_SENDER` | Sender email address | Recommended |
+| `SMTP_SENDER_NAME` | Sender display name | Recommended |
 
 ## Usage
 
-### Running the Server
+### Running the Server Locally
 
-Start the FastAPI server with uvicorn:
+Start the MCP server via the included runner (binds to 0.0.0.0 and respects PORT env var):
 
 ```bash
-fastmcp run main.py:mcp --transport http --host 0.0.0.0 --port 8000 
+python main.py --server_type=sse --port 8000
 ```
 
 The server will be available at:
@@ -99,29 +113,16 @@ The following tools are available through the MCP interface:
 2. **get_all_bundles()**: Fetch all available eSIM bundles
    - Returns: List of bundle objects with details like name, price, data allowance, etc.
 
-3. **purchase_bundle(bundle_code: str)**: Purchase an eSIM bundle
-   - Parameters: `bundle_code` - The unique identifier for the bundle
-   - Returns: `true` if successful, `false` otherwise
+3. **purchase_bundle(user_email: str, bundle_code: str)**: Purchase an eSIM bundle
+   - Parameters: `user_email` and `bundle_code`
+
+4. **purchase_bundle_and_send_activation(user_email: str, bundle_code: str)**: One-call flow to purchase, fetch activation code, build activation URL, and email it to the user.
+
+5. **get_activation_code(order_id: str)**: Get activation code for an order
+
+6. **send_activation_url_via_email(user_email: str, activation_url: str)**: Email the activation URL to the user
 
 ### Example Usage
-
-#### Using MCP Client
-```python
-# Connect to MCP server
-client = MCPClient("http://localhost:8000/mcp")
-
-# Test connection
-result = await client.call_tool("test")
-print(result)  # {"message": "The API is working!"}
-
-# Fetch all bundles
-bundles = await client.call_tool("get_all_bundles")
-print(f"Found {len(bundles)} bundles")
-
-# Purchase a bundle
-success = await client.call_tool("purchase_bundle", bundle_code="bundle-123")
-print(f"Purchase successful: {success}")
-```
 
 #### Using REST API
 ```bash
@@ -131,6 +132,32 @@ curl http://localhost:8000/
 # Access MCP interface
 curl http://localhost:8000/mcp
 ```
+
+## Deploying to Render
+
+You may deploy using either the Render dashboard (manual) or the provided Blueprint file.
+
+### Option A: Render Dashboard (Manual)
+- Build Command:
+  ```bash
+  pip install -r requirements.txt
+  ```
+- Start Command:
+  ```bash
+  python main.py --server_type=sse --port $PORT
+  ```
+- Health Check Path: `/`
+- Environment: Set all variables listed in the Environment Variables section.
+
+This replaces any `uv run ...` usage (Render images don’t include `uv`).
+
+### Option B: Render Blueprint (render.yaml)
+A `render.yaml` is included at the repo root. It defines a Web Service with the proper build and start commands and a health check. To use it:
+1. Push this repository to GitHub/GitLab.
+2. In Render, create a new Blueprint and point it to the repo.
+3. Set the environment variables in the Render dashboard.
+
+The service will bind to `0.0.0.0` and read the port from `$PORT` automatically.
 
 ## Dependencies
 
@@ -183,6 +210,7 @@ python -m pytest test.py
 - Keep your `.env` file secure and never commit it to version control
 - The API key and tenant key provide access to eSIM Hub services
 - Use HTTPS in production environments
+- Ensure your SMTP provider allows connections from Render and chosen port (587/465)
 - Consider implementing rate limiting for production deployments
 
 ## License

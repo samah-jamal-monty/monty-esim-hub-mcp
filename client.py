@@ -8,7 +8,7 @@ from mcp import Tool
 server = FastMCP("TestServer")
 
 # HTTP server
-client = Client("https://monty-esim-hub-mcp.onrender.com/mcp")
+client = Client("http://localhost:8181/mcp")
 # Local Python script
 # client = Client("main.py")
 
@@ -27,11 +27,11 @@ async def main():
         # prompts = await client.list_prompts()
 
         # Execute operations
-        result = await client.call_tool("get_all_bundles")
-        print(result)
-        purchase = await client.call_tool("purchase_bundle",
-                                          arguments={"bundle_code": "50fc41bf-e9a7-4d8a-8104-963012c63900"})
-        print(purchase)
+        # result = await client.call_tool("get_all_bundles")
+        # print(result)
+        # purchase = await client.call_tool("purchase_bundle",
+        #                                   arguments={"bundle_code": "50fc41bf-e9a7-4d8a-8104-963012c63900"})
+        # print(purchase)
 
 
 if __name__ == "__main__":
