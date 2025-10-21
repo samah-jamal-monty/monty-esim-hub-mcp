@@ -1,6 +1,9 @@
 import argparse
 import os
 from typing import List
+import threading
+import concurrent.futures
+import atexit
 
 from fastapi import FastAPI
 from fastmcp import FastMCP
@@ -11,6 +14,14 @@ from dto.bundle import Bundle
 
 mcp = FastMCP("Esim Hub Management API")
 api = FastAPI()
+
+# Module-level executor (shared/static across imports/instances)
+_email_executor: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(
+    max_workers=4, thread_name_prefix="email-sender"
+)
+
+# Ensure the executor is cleanly shutdown when the process exits
+atexit.register(lambda: _email_executor.shutdown(wait=False))
 
 
 @api.get("/")
@@ -127,7 +138,7 @@ async def purchase_bundle_and_send_activation(user_email: str, bundle_code: str)
     # 3) Build activation URL and email it
     activation_url = f"LPA:1${smdp_address}${activation_code}"
 
-    # Email the activation URL; return success/failure
+    # Email the activation URL; schedule it in background to avoid delaying the response
     try:
         subject = "Your eSIM Activation Details"
         body = (
@@ -138,10 +149,11 @@ async def purchase_bundle_and_send_activation(user_email: str, bundle_code: str)
             f"You can scan this URL with your device's eSIM manager to install the profile."
             f"<br><br>Best regards,<br>eSIM Support Team"
         )
-        send_email(subject=subject, html_content=body, recipients=user_email)
+        # schedule send_email on the shared executor
+        _send_email_in_background(subject=subject, html_content=body, recipients=user_email)
         emailed = True
     except Exception as e:
-        logger.error(f"Failed to send activation email to {user_email}: {str(e)}")
+        logger.error(f"Failed to schedule activation email to {user_email}: {str(e)}")
         emailed = False
 
     return {
@@ -152,6 +164,30 @@ async def purchase_bundle_and_send_activation(user_email: str, bundle_code: str)
         "activation_url": activation_url,
         "email_sent": emailed,
     }
+
+
+# Background email sender helper so sending doesn't block the request/agent
+def _send_email_in_background(subject: str, html_content: str, recipients: str | list[str] | None = None):
+    """Submit send_email to the module-level executor and attach a done callback to log errors.
+
+    Returns the Future object so callers can inspect result if needed. The scheduling is non-blocking.
+    """
+
+    def _call_send_email():
+        # This runs in a worker thread.
+        send_email(subject=subject, html_content=html_content, recipients=recipients)
+
+    future = _email_executor.submit(_call_send_email)
+
+    def _on_done(fut: concurrent.futures.Future):
+        try:
+            # Will re-raise any exception raised by send_email so we can log it
+            fut.result()
+        except Exception:
+            logger.exception("Background send_email failed for recipients=%s", recipients)
+
+    future.add_done_callback(_on_done)
+    return future
 
 
 @mcp.tool
@@ -171,7 +207,8 @@ async def send_activation_url_via_email(user_email: str, activation_url: str) ->
         f"<br><br>Best regards,<br>eSIM Support Team"
     )
     try:
-        send_email(subject=subject, html_content=body, recipients=user_email)
+        # schedule send_email on the shared executor so this call returns quickly
+        _send_email_in_background(subject=subject, html_content=body, recipients=user_email)
         return True
     except Exception:
         return False
