@@ -4,6 +4,7 @@ from typing import List
 
 from fastapi import FastAPI
 from fastmcp import FastMCP
+from loguru import logger
 
 from config.utils import send_email
 from dto.bundle import Bundle
@@ -140,6 +141,7 @@ async def purchase_bundle_and_send_activation(user_email: str, bundle_code: str)
         send_email(subject=subject, html_content=body, recipients=user_email)
         emailed = True
     except Exception as e:
+        logger.error(f"Failed to send activation email to {user_email}: {str(e)}")
         emailed = False
 
     return {

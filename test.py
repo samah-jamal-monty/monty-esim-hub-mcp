@@ -1,10 +1,8 @@
 import asyncio
 
-from config.utils import esim_hub_service_instance
+from config.utils import esim_hub_service_instance, send_email
 
 service = esim_hub_service_instance()
 
 
-bundles = asyncio.run(service.get_all_bundles())
-
-print(bundles)
+send_email("test","<h1>Test</h1>","samah.jamal.monty@gmail.com")
