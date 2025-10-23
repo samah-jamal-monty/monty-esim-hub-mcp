@@ -50,7 +50,7 @@ class EsimHubService:
             "Content-Type": "application/json",
         }
 
-    async def get_all_bundles(self, page_index=1, page_size=100) -> List[Bundle]:
+    async def get_all_bundles(self, page_index=1, page_size=20) -> List[Bundle]:
         url = f"{self.__digital_service_url}{EsimHubEndpoint.API_GET_ALL_BUNDLES}"
         logger.info(f"getting bundles from {url} with page_index={page_index} and page_size={page_size}")
         params = {
@@ -68,6 +68,8 @@ class EsimHubService:
             return []
 
     async def purchase_bundle(self, bundle_code: str, user_email: str) -> dict:
+        if not self.check_bundle_applicability(bundle_code):
+            return {"success": False, "error": "Bundle not available for purchase"}
         url = f"{self.__mm_hub_url}{EsimHubEndpoint.API_CREATE_RESELLER_ORDER}"
         request_body = {
             "BundleGuid": bundle_code,
@@ -124,3 +126,19 @@ class EsimHubService:
         else:
             logger.error(f"Failed to fetch order history: {response.status_code} {response.text}")
             return []
+
+    async def check_bundle_applicability(self, bundle_code: str) -> bool:
+        url = f"{self.__mm_hub_url}{EsimHubEndpoint.API_CHECK_BUNDLE_APPLICABLE}"
+        logger.info(f"checking bundle applicability from {url} for bundle {bundle_code}")
+        params = {
+            "bundleCode": bundle_code,
+        }
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url=url, headers=self.__headers, params=params)
+        if response.status_code == 200:
+            if "success" not in response:
+                return False
+            return True
+        else:
+            logger.error(f"Failed to check bundle applicability: {response.status_code} {response.text}")
+            return False

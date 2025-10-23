@@ -1,9 +1,8 @@
 import argparse
+import atexit
+import concurrent.futures
 import os
 from typing import List
-import threading
-import concurrent.futures
-import atexit
 
 from fastapi import FastAPI
 from fastmcp import FastMCP
