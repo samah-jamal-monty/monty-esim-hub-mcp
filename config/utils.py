@@ -10,7 +10,10 @@ load_dotenv()
 
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = os.getenv("SMTP_PORT", 587)
+# Keep backward-compatible env name SMTP_USE_TLS but interpret it as "prefer SSL (SMTP_SSL)"
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "false").lower() in ("true", "1", "yes")
+# Allow configuring timeout
+SMTP_TIMEOUT = int(os.getenv("SMTP_TIMEOUT", 10))
 
 USERNAME = os.getenv("SMTP_USERNAME", "<EMAIL>")
 PASSWORD = os.getenv("SMTP_PASSWORD", "<PASSWORD>")
@@ -74,22 +77,81 @@ def send_email(subject: str, html_content: str, recipients: str, attachment: Byt
             encoders.encode_base64(img)
             img.add_header('Content-Disposition', 'attachment', filename='qr_code.png')
             msg.attach(img)
-        logger.info(f"opening SMTP connection to {SMTP_SERVER}:{SMTP_PORT}")
-        # Send email
+
+        # Prepare connection params
+        try:
+            port = int(SMTP_PORT)
+        except Exception:
+            port = 587
+        timeout = int(os.getenv("SMTP_TIMEOUT", SMTP_TIMEOUT))
+
+        logger.info(f"opening SMTP connection to {SMTP_SERVER}:{port} (timeout={timeout}s), prefer_ssl={SMTP_USE_TLS}")
+
+        # Connection strategy:
+        # - If SMTP_USE_TLS is truthy we first attempt SMTP_SSL (explicit SSL). If that fails, fall back to SMTP + STARTTLS.
+        # - Otherwise, first attempt SMTP + STARTTLS, and if that fails try SMTP_SSL as a fallback.
+        last_exception = None
+
+        def _send_via_smtp_ssl():
+            logger.info("Attempting SMTP_SSL connection")
+            with smtplib.SMTP_SSL(SMTP_SERVER, port, timeout=timeout) as server:
+                server.login(USERNAME, PASSWORD)
+                server.send_message(msg)
+
+        def _send_via_smtp_starttls():
+            logger.info("Attempting SMTP connection with STARTTLS")
+            with smtplib.SMTP(SMTP_SERVER, port, timeout=timeout) as server:
+                server.ehlo()
+                try:
+                    server.starttls()
+                    server.ehlo()
+                except Exception as e:
+                    # STARTTLS may not be supported; log and continue to attempt login without it
+                    logger.warning(f"STARTTLS failed or not supported: {e}")
+                server.login(USERNAME, PASSWORD)
+                server.send_message(msg)
+
         if SMTP_USE_TLS:
-            with smtplib.SMTP_SSL(SMTP_SERVER, int(SMTP_PORT), timeout=10) as server:
-                server.login(USERNAME, PASSWORD)
-                server.send_message(msg)
-                logger.info(f"Email sent successfully to {recipients}")
+            # Prefer SSL first
+            try:
+                _send_via_smtp_ssl()
+                logger.info(f"Email sent successfully to {recipients} via SMTP_SSL")
+                return
+            except Exception as e:
+                last_exception = e
+                logger.warning(f"SMTP_SSL send failed: {e}; will try SMTP + STARTTLS fallback")
+            # fallback to STARTTLS
+            try:
+                _send_via_smtp_starttls()
+                logger.info(f"Email sent successfully to {recipients} via SMTP + STARTTLS (fallback)")
+                return
+            except Exception as e:
+                last_exception = e
+                logger.exception("SMTP STARTTLS fallback also failed")
+                raise
         else:
-            with smtplib.SMTP(SMTP_SERVER, int(SMTP_PORT), timeout=10) as server:
-                server.starttls()
-                server.login(USERNAME, PASSWORD)
-                server.send_message(msg)
-                logger.info(f"Email sent successfully to {recipients}")
+            # Prefer STARTTLS first
+            try:
+                _send_via_smtp_starttls()
+                logger.info(f"Email sent successfully to {recipients} via SMTP + STARTTLS")
+                return
+            except Exception as e:
+                last_exception = e
+                logger.warning(f"SMTP + STARTTLS send failed: {e}; will try SMTP_SSL fallback")
+            # fallback to SMTP_SSL
+            try:
+                _send_via_smtp_ssl()
+                logger.info(f"Email sent successfully to {recipients} via SMTP_SSL (fallback)")
+                return
+            except Exception as e:
+                last_exception = e
+                logger.exception("SMTP_SSL fallback also failed")
+                raise
+
     except smtplib.SMTPException as e:
-        logger.error(f"Failed to send email: {str(e)}")
+        logger.exception(f"Failed to send email: {str(e)}")
         raise
     except Exception as e:
-        logger.error(f"Unexpected error while sending email: {str(e)}")
+        # Log full exception including stack trace to help diagnose timeouts
+        logger.exception(f"Unexpected error while sending email: {str(e)}")
         raise
