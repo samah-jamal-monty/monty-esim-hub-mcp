@@ -149,8 +149,13 @@ async def purchase_bundle_and_send_activation(user_email: str, bundle_code: str)
             f"<br><br>Best regards,<br>eSIM Support Team"
         )
         # schedule send_email on the shared executor
-        _send_email_in_background(subject=subject, html_content=body, recipients=user_email)
-        emailed = True
+        # _send_email_in_background(subject=subject, html_content=body, recipients=user_email)
+        try:
+            send_email(subject=subject, html_content=body, recipients=user_email)
+            emailed = True
+        except Exception as e:
+            logger.error(f"Immediate send_email failed, scheduling in background: {str(e)}")
+            emailed = False
     except Exception as e:
         logger.error(f"Failed to schedule activation email to {user_email}: {str(e)}")
         emailed = False
