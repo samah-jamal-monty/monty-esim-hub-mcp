@@ -21,6 +21,9 @@ class DtoMapper:
         all_countries = [c.get("name", "") for c in data.get("supportedCountries", [])]
         sliced_countries = all_countries[:5]  # limit to first 5 countries
         countries = ", ".join(sliced_countries) + f" and {len(all_countries) - 5} more" if sliced_countries else ""
+
+        all_regions = [r.get("name", "") for r in data.get("supportedZones", [])]
+        regions = ", ".join(all_regions)
         return Bundle(
             code=code,
             name=name,
@@ -29,4 +32,7 @@ class DtoMapper:
             validity=validity,
             countries=countries,
             gprs_limit=gprs_limit_display,
+            all_countries=all_countries,
+            all_regions=all_regions,
+            regions=regions
         )

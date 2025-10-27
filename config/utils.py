@@ -86,7 +86,12 @@ def send_email(subject: str, html_content: str, recipients: str, attachment: Byt
             port = 587
         timeout = int(os.getenv("SMTP_TIMEOUT", SMTP_TIMEOUT))
 
-        logger.info(f"opening SMTP connection to {SMTP_SERVER}:{port} (timeout={timeout}s), prefer_ssl={SMTP_USE_TLS}")
+        # If the configured port is 587 (STARTTLS), many providers expect implicit SSL on 465.
+        # Prefer using 465 for SMTP_SSL attempts when port == 587 to avoid connecting with SSL on 587 which may time out.
+        ssl_port = port if port != 587 else 465
+
+        logger.info(
+            f"opening SMTP connection to {SMTP_SERVER}:{port} (timeout={timeout}s), prefer_ssl={SMTP_USE_TLS}, smtp_ssl_port={ssl_port}")
 
         # Connection strategy:
         # - If SMTP_USE_TLS is truthy we first attempt SMTP_SSL (explicit SSL). If that fails, fall back to SMTP + STARTTLS.
@@ -94,13 +99,13 @@ def send_email(subject: str, html_content: str, recipients: str, attachment: Byt
         last_exception = None
 
         def _send_via_smtp_ssl():
-            logger.info("Attempting SMTP_SSL connection")
-            with smtplib.SMTP_SSL(SMTP_SERVER, port, timeout=timeout) as server:
+            logger.info(f"Attempting SMTP_SSL connection to {SMTP_SERVER}:{ssl_port}")
+            with smtplib.SMTP_SSL(SMTP_SERVER, ssl_port, timeout=timeout) as server:
                 server.login(USERNAME, PASSWORD)
                 server.send_message(msg)
 
         def _send_via_smtp_starttls():
-            logger.info("Attempting SMTP connection with STARTTLS")
+            logger.info(f"Attempting SMTP connection with STARTTLS to {SMTP_SERVER}:{port}")
             with smtplib.SMTP(SMTP_SERVER, port, timeout=timeout) as server:
                 server.ehlo()
                 try:
@@ -116,7 +121,7 @@ def send_email(subject: str, html_content: str, recipients: str, attachment: Byt
             # Prefer SSL first
             try:
                 _send_via_smtp_ssl()
-                logger.info(f"Email sent successfully to {recipients} via SMTP_SSL")
+                logger.info(f"Email sent successfully to {recipients} via SMTP_SSL:{ssl_port}")
                 return
             except Exception as e:
                 last_exception = e
@@ -138,11 +143,11 @@ def send_email(subject: str, html_content: str, recipients: str, attachment: Byt
                 return
             except Exception as e:
                 last_exception = e
-                logger.warning(f"SMTP + STARTTLS send failed: {e}; will try SMTP_SSL fallback")
+                logger.warning(f"SMTP + STARTTLS send failed: {e}; will try SMTP_SSL fallback (port {ssl_port})")
             # fallback to SMTP_SSL
             try:
                 _send_via_smtp_ssl()
-                logger.info(f"Email sent successfully to {recipients} via SMTP_SSL (fallback)")
+                logger.info(f"Email sent successfully to {recipients} via SMTP_SSL:{ssl_port} (fallback)")
                 return
             except Exception as e:
                 last_exception = e

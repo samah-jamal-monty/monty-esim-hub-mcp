@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import BaseModel
 
 
@@ -8,4 +10,7 @@ class Bundle(BaseModel):
     validity: str
     price: str
     countries: str
+    regions: str
+    all_countries: List[str]
+    all_regions: List[str]
     gprs_limit: str

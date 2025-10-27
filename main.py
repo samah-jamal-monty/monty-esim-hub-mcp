@@ -44,7 +44,6 @@ def user_journey() -> str:
         "4) Ask the user for his email address to proceed with the purchase.\n"
         "5) Use the purchase_bundle_and_send_activation tool to complete the purchase and email the activation details: \n"
         "   - for the bundle code, you can use the selected bundle from step 3.\n"
-        
         "6) Confirm to the user that the activation details have been sent to his email.\n"
         "7) User can also ask for his order history by providing his email (use get_order_history tool).\n"
         "Always ensure to validate user inputs and handle errors gracefully."
