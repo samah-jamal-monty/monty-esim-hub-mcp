@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastmcp import FastMCP
 from loguru import logger
 
-from config.utils import send_email
+from config.utils import send_email, generate_qr_code
 from dto.bundle import Bundle
 
 mcp = FastMCP("Esim Hub Management API")
@@ -116,7 +116,7 @@ async def purchase_bundle_and_send_activation(user_email: str, bundle_code: str)
 
     # 3) Build activation URL and email it
     activation_url = f"LPA:1${smdp_address}${activation_code}"
-
+    qr = generate_qr_code(activation_url)
     # Email the activation URL; schedule it in background to avoid delaying the response
     try:
         subject = "Your eSIM Activation Details"
@@ -131,7 +131,7 @@ async def purchase_bundle_and_send_activation(user_email: str, bundle_code: str)
         # schedule send_email on the shared executor
         # _send_email_in_background(subject=subject, html_content=body, recipients=user_email)
         try:
-            send_email(subject=subject, html_content=body, recipients=user_email.replace(" ", ""))
+            send_email(subject=subject, html_content=body, recipients=user_email.replace(" ", ""), attachment=qr)
             emailed = True
         except Exception as e:
             logger.error(f"Immediate send_email failed, scheduling in background: {str(e)}")

@@ -155,3 +155,11 @@ def send_email(subject: str, html_content: str, recipients: str, attachment: Byt
         # Log full exception including stack trace to help diagnose timeouts
         logger.exception(f"Unexpected error while sending email: {str(e)}")
         raise
+
+
+def generate_qr_code(qr_data: str) -> BytesIO:
+    qr = qrcode.make(qr_data)
+    buffer = BytesIO()
+    qr.save(buffer, format="PNG")
+    buffer.seek(0)
+    return buffer

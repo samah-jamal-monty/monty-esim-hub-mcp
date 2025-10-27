@@ -19,7 +19,8 @@ class DtoMapper:
         else:
             validity = "0 Day"
         all_countries = [c.get("name", "") for c in data.get("supportedCountries", [])]
-        countries = ", ".join(all_countries) if all_countries else ""
+        sliced_countries = all_countries[:5]  # limit to first 5 countries
+        countries = ", ".join(sliced_countries) + f" and {len(all_countries) - 5} more" if sliced_countries else ""
         return Bundle(
             code=code,
             name=name,
