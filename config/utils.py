@@ -91,22 +91,19 @@ def send_email(subject: str, html_content: str, recipients: str, attachment: Byt
         ssl_port = port if port != 587 else 465
 
         logger.info(
-            f"opening SMTP connection to {SMTP_SERVER}:{port} (timeout={timeout}s), prefer_ssl={SMTP_USE_TLS}, smtp_ssl_port={ssl_port}")
+            f"opening SMTP connection to {SMTP_SERVER}:{port} (timeout={timeout}s), prefer_ssl={SMTP_USE_TLS}, smtp_ssl_port={ssl_port}"
+        )
 
-        # Connection strategy:
-        # - If SMTP_USE_TLS is truthy we first attempt SMTP_SSL (explicit SSL). If that fails, fall back to SMTP + STARTTLS.
-        # - Otherwise, first attempt SMTP + STARTTLS, and if that fails try SMTP_SSL as a fallback.
-        last_exception = None
-
-        def _send_via_smtp_ssl():
-            logger.info(f"Attempting SMTP_SSL connection to {SMTP_SERVER}:{ssl_port}")
-            with smtplib.SMTP_SSL(SMTP_SERVER, ssl_port, timeout=timeout) as server:
+        # Define concrete send actions that raise on failure
+        def _send_via_smtp_ssl(target_port: int):
+            logger.info(f"Attempting SMTP_SSL connection to {SMTP_SERVER}:{target_port}")
+            with smtplib.SMTP_SSL(SMTP_SERVER, target_port, timeout=timeout) as server:
                 server.login(USERNAME, PASSWORD)
                 server.send_message(msg)
 
-        def _send_via_smtp_starttls():
-            logger.info(f"Attempting SMTP connection with STARTTLS to {SMTP_SERVER}:{port}")
-            with smtplib.SMTP(SMTP_SERVER, port, timeout=timeout) as server:
+        def _send_via_smtp_starttls(target_port: int):
+            logger.info(f"Attempting SMTP connection with STARTTLS to {SMTP_SERVER}:{target_port}")
+            with smtplib.SMTP(SMTP_SERVER, target_port, timeout=timeout) as server:
                 server.ehlo()
                 try:
                     server.starttls()
@@ -117,42 +114,35 @@ def send_email(subject: str, html_content: str, recipients: str, attachment: Byt
                 server.login(USERNAME, PASSWORD)
                 server.send_message(msg)
 
+        # Build attempt list (name, callable) in the preferred order
         if SMTP_USE_TLS:
-            # Prefer SSL first
-            try:
-                _send_via_smtp_ssl()
-                logger.info(f"Email sent successfully to {recipients} via SMTP_SSL:{ssl_port}")
-                return
-            except Exception as e:
-                last_exception = e
-                logger.warning(f"SMTP_SSL send failed: {e}; will try SMTP + STARTTLS fallback")
-            # fallback to STARTTLS
-            try:
-                _send_via_smtp_starttls()
-                logger.info(f"Email sent successfully to {recipients} via SMTP + STARTTLS (fallback)")
-                return
-            except Exception as e:
-                last_exception = e
-                logger.exception("SMTP STARTTLS fallback also failed")
-                raise
+            attempts = [
+                (f"SMTP_SSL:{ssl_port}", lambda: _send_via_smtp_ssl(ssl_port)),
+                (f"SMTP+STARTTLS:{port}", lambda: _send_via_smtp_starttls(port)),
+            ]
         else:
-            # Prefer STARTTLS first
+            attempts = [
+                (f"SMTP+STARTTLS:{port}", lambda: _send_via_smtp_starttls(port)),
+                (f"SMTP_SSL:{ssl_port}", lambda: _send_via_smtp_ssl(ssl_port)),
+            ]
+
+        last_exc = None
+        # Try each attempt in order; return on first success
+        for name, fn in attempts:
             try:
-                _send_via_smtp_starttls()
-                logger.info(f"Email sent successfully to {recipients} via SMTP + STARTTLS")
+                fn()
+                logger.info(f"Email sent successfully to {recipients} via {name}")
                 return
             except Exception as e:
-                last_exception = e
-                logger.warning(f"SMTP + STARTTLS send failed: {e}; will try SMTP_SSL fallback (port {ssl_port})")
-            # fallback to SMTP_SSL
-            try:
-                _send_via_smtp_ssl()
-                logger.info(f"Email sent successfully to {recipients} via SMTP_SSL:{ssl_port} (fallback)")
-                return
-            except Exception as e:
-                last_exception = e
-                logger.exception("SMTP_SSL fallback also failed")
-                raise
+                last_exc = e
+                logger.warning(f"{name} send failed: {e}")
+
+        # If we reach here all attempts failed
+        logger.exception("All SMTP send strategies failed")
+        if last_exc:
+            raise last_exc
+        else:
+            raise RuntimeError("Failed to send email: unknown error")
 
     except smtplib.SMTPException as e:
         logger.exception(f"Failed to send email: {str(e)}")
