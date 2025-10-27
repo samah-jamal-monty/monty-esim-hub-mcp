@@ -1,6 +1,7 @@
 import os
 from io import BytesIO
 
+import qrcode
 from dotenv import load_dotenv
 from loguru import logger
 
