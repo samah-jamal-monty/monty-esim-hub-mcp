@@ -18,8 +18,8 @@ class DtoMapper:
             validity = validity_details[0].get("name", "0 Day")
         else:
             validity = "0 Day"
-        countries = [c.get("name", "") for c in data.get("supportedCountries", [])]
-
+        all_countries = [c.get("name", "") for c in data.get("supportedCountries", [])]
+        countries = ", ".join(all_countries) if all_countries else ""
         return Bundle(
             code=code,
             name=name,

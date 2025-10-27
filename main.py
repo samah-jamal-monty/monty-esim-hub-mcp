@@ -34,45 +34,25 @@ def health():
 
 
 @mcp.prompt
-def system_message() -> str:
-    return (
-        "You are a helpful assistant that provides information about eSIM bundles and helps users purchase them. "
-        "Use the available tools to fetch bundle details, create orders, retrieve activation codes, and send activation URLs via email. "
-        "Always ensure to collect a valid email address from the user before proceeding with order creation."
-    )
-
-
-@mcp.prompt
 def user_journey() -> str:
     return (
-        "The typical user journey is as follows:\n"
-        "1) User asks about available eSIM bundles.\n"
-        "2) Use the 'get_all_bundles' tool to fetch and display available bundles.\n"
-        "3) User selects a bundle and provides a valid email address (required for order).\n"
-        "4) Create the order and deliver activation details:\n"
-        "   - Option A (recommended, one call): use 'purchase_bundle_and_send_activation(user_email, bundle_code)'. It will:\n"
-        "     • Create the reseller order including the user's email.\n"
-        "     • Extract 'smdpAdress' (SMDP+ address) and 'orderId' from the order response.\n"
-        "     • Call 'get_activation_code(orderId)' to obtain the activation code.\n"
-        "     • Build the activation URL in the form: LPA:1$<SMDP+>$<ACTIVATION_CODE>.\n"
-        "     • Email the activation details (SMDP+ address, activation code, activation URL) to the user.\n"
-        "   - Option B (manual steps):\n"
-        "     • Call 'purchase_bundle(user_email, bundle_code)' to create the order.\n"
-        "     • From the response, extract 'orderId' and 'smdpAdress'.\n"
-        "     • Call 'get_activation_code(orderId)' to get the activation code.\n"
-        "     • Construct 'activation_url' = LPA:1$<SMDP+>$<ACTIVATION_CODE>.\n"
-        "     • Call 'send_activation_url_via_email(user_email, activation_url)'.\n"
-        "5) Confirm to the user that the activation details have been emailed (provide a brief summary without exposing sensitive data).\n"
-        "6) Remind the user to check their email (including spam/junk folder) for the activation details.\n"
-        "7) For the order history, use 'get_order_history(user_email)' to fetch past orders associated with the email.\n"
-        "8) Show only the order summary (orderId, bundleCode, purchaseDate, smdp address and activation code if found in the response) without sensitive details.\n"
-        "Always validate the email format before using it."
+        "You are an assistant for helping users find and purchase eSIM bundles from the Esim Hub service. "
+        "Follow these steps to assist the user:\n"
+        "1) Greet the user and ask him for what bundle he is looking for.\n"
+        "2) Provide the user with available bundle options ( you can use the search_bundle tool).\n"
+        "3) Ask the user to select a bundle by its code or index number (1,2,3).\n"
+        "4) Ask the user for his email address to proceed with the purchase.\n"
+        "5) Use the purchase_bundle_and_send_activation tool to complete the purchase and email the activation details.\n"
+        "6) Confirm to the user that the activation details have been sent to his email.\n"
+        "7) User can also ask for his order history by providing his email (use get_order_history tool).\n"
+        "Always ensure to validate user inputs and handle errors gracefully."
     )
 
 
-@mcp.tool
-def test() -> dict:
-    return {"message": "The API is working!"}
+@mcp.resource("resource://greeting")
+def get_greeting() -> str:
+    """Provides a simple greeting message."""
+    return "Hello, welcome to the eSIM Hub! What bundle are you looking for today?"
 
 
 @mcp.tool
@@ -87,19 +67,19 @@ async def get_all_bundles() -> List[Bundle]:
 
 
 @mcp.tool
-async def purchase_bundle(user_email: str, bundle_code: str) -> dict:
-    """Purchase a bundle by its code. Returns True if successful. User email is required for the order."""
+async def search_bundles(keyword: str = None, country_name: str = None, gprs_from: str = None, gprs_to: str = None,
+                         currency_code: str = None, validity: str = None) -> List[Bundle]:
+    """Search bundles from the Esim Hub.
+        - keyword is optional.
+        - gprs from and gprs to are in MB or GB (e.g., '500MB', '2GB').
+        - validity is in days or years (e.g., '30 days', '1 year').
+        - country_name is optional.
+        - currency_code is optional.
+    """
     from config.utils import esim_hub_service_instance
-    from email_validator import validate_email, EmailNotValidError
-
-    # Basic validation to ensure the agent captured a valid email
-    try:
-        user_email = validate_email(user_email, check_deliverability=False).normalized
-    except EmailNotValidError as e:
-        return {"success": False, "error": f"Invalid email: {str(e)}"}
-
     service = esim_hub_service_instance()
-    return await service.purchase_bundle(bundle_code, user_email)
+    return await service.search_bundles(search_keyword=keyword, country_name=country_name, gprs_from=gprs_from,
+                                        gprs_to=gprs_to, currency_code=currency_code, validity=validity)
 
 
 @mcp.tool
@@ -151,7 +131,7 @@ async def purchase_bundle_and_send_activation(user_email: str, bundle_code: str)
         # schedule send_email on the shared executor
         # _send_email_in_background(subject=subject, html_content=body, recipients=user_email)
         try:
-            send_email(subject=subject, html_content=body, recipients=user_email.replace(" ",""))
+            send_email(subject=subject, html_content=body, recipients=user_email.replace(" ", ""))
             emailed = True
         except Exception as e:
             logger.error(f"Immediate send_email failed, scheduling in background: {str(e)}")
@@ -216,14 +196,6 @@ async def send_activation_url_via_email(user_email: str, activation_url: str) ->
         return True
     except Exception:
         return False
-
-
-@mcp.tool
-async def get_activation_code(order_id: str) -> str:
-    """Get activation code for a given order GUID."""
-    from config.utils import esim_hub_service_instance
-    service = esim_hub_service_instance()
-    return await service.get_activation_code(order_id)
 
 
 @mcp.tool

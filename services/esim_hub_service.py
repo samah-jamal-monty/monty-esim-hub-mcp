@@ -21,6 +21,7 @@ class EsimHubEndpoint(StrEnum):
     API_GET_TOPUP_RELATED_BUNDLES = "/core/api/v1/order/compatible-topup-with-currency"
 
     API_GET_ALL_BUNDLES = "/catalog/api/v1/Bundle/get-all-basic/active"
+    API_SEARCH_BUNDLES = "/core/api/v1/catalog/bundles/search?pageSize=20"
 
     API_GET_CONTENT_TAG = "/catalog/api/reseller/v1/Content/get-latest"
     API_GET_CONTENT_TAGS = "/catalog/api/reseller/v1/Content/get-all-content"
@@ -87,7 +88,7 @@ class EsimHubService:
         }
         logger.info(f"creating order for bundle {bundle_code} at {url} with body {request_body}")
         async with httpx.AsyncClient() as client:
-            response = await client.post(url=url, headers=self.__headers, json=request_body)
+            response = await client.post(url=url, headers=self.__headers, json=request_body, timeout=60)
             logger.info(f"response: {response.status_code} {response.text}")
         if response.status_code != 200:
             logger.error(f"Failed to purchase bundle {bundle_code}: {response.status_code} {response.text}")
@@ -142,3 +143,25 @@ class EsimHubService:
         else:
             logger.error(f"Failed to check bundle applicability: {response.status_code} {response.text}")
             return False
+
+    async def search_bundles(self, gprs_from: str = None, gprs_to: str = None, validity: str = None,
+                             country_name: str = None, currency_code: str = None,
+                             search_keyword: str = None) -> List[Bundle]:
+        url = f"{self.__mm_hub_url}{EsimHubEndpoint.API_SEARCH_BUNDLES}"
+        logger.info(f"searching bundles from {url} with keyword={search_keyword} headers: {self.__headers}")
+        params = {
+            "&GprsFrom": gprs_from,
+            "gprsTo": gprs_to,
+            "Validity": validity,
+            "CountryName": country_name,
+            "CurrencyCode": currency_code,
+            "Search": search_keyword,
+        }
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url=url, headers=self.__headers, params=params, timeout=60)
+        if response.status_code == 200:
+            data = response.json()
+            return [DtoMapper.to_bundle(item) for item in data["data"]["items"]]
+        else:
+            logger.error(f"Failed to search bundles: {response.status_code} {response.text}")
+            return []

@@ -7,5 +7,5 @@ class Bundle(BaseModel):
     description: str
     validity: str
     price: str
-    countries: list[str]
+    countries: str
     gprs_limit: str
