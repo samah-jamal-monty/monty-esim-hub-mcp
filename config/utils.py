@@ -78,78 +78,24 @@ def send_email(subject: str, html_content: str, recipients: str, attachment: Byt
             encoders.encode_base64(img)
             img.add_header('Content-Disposition', 'attachment', filename='qr_code.png')
             msg.attach(img)
-
-        # Prepare connection params
-        try:
-            port = int(SMTP_PORT)
-        except Exception:
-            port = 587
-        timeout = int(os.getenv("SMTP_TIMEOUT", SMTP_TIMEOUT))
-
-        # If the configured port is 587 (STARTTLS), many providers expect implicit SSL on 465.
-        # Prefer using 465 for SMTP_SSL attempts when port == 587 to avoid connecting with SSL on 587 which may time out.
-        ssl_port = port if port != 587 else 465
-
-        logger.info(
-            f"opening SMTP connection to {SMTP_SERVER}:{port} (timeout={timeout}s), prefer_ssl={SMTP_USE_TLS}, smtp_ssl_port={ssl_port}"
-        )
-
-        # Define concrete send actions that raise on failure
-        def _send_via_smtp_ssl(target_port: int):
-            logger.info(f"Attempting SMTP_SSL connection to {SMTP_SERVER}:{target_port}")
-            with smtplib.SMTP_SSL(SMTP_SERVER, target_port, timeout=timeout) as server:
-                server.login(USERNAME, PASSWORD)
-                server.send_message(msg)
-
-        def _send_via_smtp_starttls(target_port: int):
-            logger.info(f"Attempting SMTP connection with STARTTLS to {SMTP_SERVER}:{target_port}")
-            with smtplib.SMTP(SMTP_SERVER, target_port, timeout=timeout) as server:
-                server.ehlo()
-                try:
-                    server.starttls()
-                    server.ehlo()
-                except Exception as e:
-                    # STARTTLS may not be supported; log and continue to attempt login without it
-                    logger.warning(f"STARTTLS failed or not supported: {e}")
-                server.login(USERNAME, PASSWORD)
-                server.send_message(msg)
-
-        # Build attempt list (name, callable) in the preferred order
+        logger.info(f"opening SMTP connection to {SMTP_SERVER}:{SMTP_PORT}")
+        # Send email
         if SMTP_USE_TLS:
-            attempts = [
-                (f"SMTP_SSL:{ssl_port}", lambda: _send_via_smtp_ssl(ssl_port)),
-                (f"SMTP+STARTTLS:{port}", lambda: _send_via_smtp_starttls(port)),
-            ]
+            with smtplib.SMTP_SSL(SMTP_SERVER, int(SMTP_PORT), timeout=10) as server:
+                server.login(USERNAME, PASSWORD)
+                server.send_message(msg)
+                logger.info(f"Email sent successfully to {recipients}")
         else:
-            attempts = [
-                (f"SMTP+STARTTLS:{port}", lambda: _send_via_smtp_starttls(port)),
-                (f"SMTP_SSL:{ssl_port}", lambda: _send_via_smtp_ssl(ssl_port)),
-            ]
-
-        last_exc = None
-        # Try each attempt in order; return on first success
-        for name, fn in attempts:
-            try:
-                fn()
-                logger.info(f"Email sent successfully to {recipients} via {name}")
-                return
-            except Exception as e:
-                last_exc = e
-                logger.warning(f"{name} send failed: {e}")
-
-        # If we reach here all attempts failed
-        logger.exception("All SMTP send strategies failed")
-        if last_exc:
-            raise last_exc
-        else:
-            raise RuntimeError("Failed to send email: unknown error")
-
+            with smtplib.SMTP(SMTP_SERVER, int(SMTP_PORT), timeout=10) as server:
+                server.starttls()
+                server.login(USERNAME, PASSWORD)
+                server.send_message(msg)
+                logger.info(f"Email sent successfully to {recipients}")
     except smtplib.SMTPException as e:
-        logger.exception(f"Failed to send email: {str(e)}")
+        logger.error(f"Failed to send email: {str(e)}")
         raise
     except Exception as e:
-        # Log full exception including stack trace to help diagnose timeouts
-        logger.exception(f"Unexpected error while sending email: {str(e)}")
+        logger.error(f"Unexpected error while sending email: {str(e)}")
         raise
 
 
