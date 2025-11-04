@@ -20,7 +20,7 @@ class ApiKeyTokenVerifier(TokenVerifier):
     It validates that the bearer token equals the ESIM_HUB_API_KEY environment variable.
     """
 
-    def __init__(self, api_key: str | None):
+    def __init__(self):
         super().__init__()
 
     async def verify_token(self, token: str) -> AccessToken | None:
@@ -34,7 +34,7 @@ class ApiKeyTokenVerifier(TokenVerifier):
 
 
 # Instantiate FastMCP with auth using the ESIM_HUB_API_KEY
-mcp = FastMCP("Esim Hub Management API", auth=ApiKeyTokenVerifier(os.getenv("ESIM_HUB_API_KEY")))
+mcp = FastMCP("Esim Hub Management API", auth=ApiKeyTokenVerifier())
 api = FastAPI()
 
 # Module-level executor (shared/static across imports/instances)
