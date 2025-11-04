@@ -20,11 +20,11 @@ USERNAME = os.getenv("SMTP_USERNAME", "<EMAIL>")
 PASSWORD = os.getenv("SMTP_PASSWORD", "<PASSWORD>")
 
 
-def esim_hub_service_instance() -> EsimHubService:
+def esim_hub_service_instance(api_key: str) -> EsimHubService:
     return EsimHubService(
         digital_service_url=os.getenv("ESIM_DIGITAL_SERVICE_URL"),
         mm_hub_url=os.getenv("ESIM_MM_HUB_API_URL"),
-        api_key=os.getenv("ESIM_HUB_API_KEY"),
+        api_key=api_key,
         tenant_key=os.getenv("ESIM_HUB_TENANT_KEY")
     )
 

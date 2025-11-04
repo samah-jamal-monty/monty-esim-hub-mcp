@@ -5,13 +5,37 @@ import os
 from typing import List
 
 from fastapi import FastAPI
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
+# Create an auth TokenVerifier that accepts the same ESIM_HUB_API_KEY used by the Esim Hub
+from fastmcp.server.auth import TokenVerifier, AccessToken
 from loguru import logger
 
 from config.utils import send_email, generate_qr_code
 from dto.bundle import Bundle
 
-mcp = FastMCP("Esim Hub Management API")
+
+class ApiKeyTokenVerifier(TokenVerifier):
+    """Simple TokenVerifier that accepts a single static API key (used as bearer token).
+
+    It validates that the bearer token equals the ESIM_HUB_API_KEY environment variable.
+    """
+
+    def __init__(self, api_key: str | None):
+        super().__init__()
+        self._api_key = api_key
+
+    async def verify_token(self, token: str) -> AccessToken | None:
+        # Token can be None if no Authorization header present
+        if not token or not self._api_key:
+            return None
+        # Accept if token exactly equals configured API key
+        if token == self._api_key:
+            return AccessToken(token=token, client_id="esimhub-apikey", scopes=[], expires_at=None, claims={})
+        return None
+
+
+# Instantiate FastMCP with auth using the ESIM_HUB_API_KEY
+mcp = FastMCP("Esim Hub Management API", auth=ApiKeyTokenVerifier(os.getenv("ESIM_HUB_API_KEY")))
 api = FastAPI()
 
 # Module-level executor (shared/static across imports/instances)
@@ -56,19 +80,32 @@ def get_greeting() -> str:
     return "Hello, welcome to the eSIM Hub! What bundle are you looking for today?"
 
 
-@mcp.tool
-async def get_all_bundles() -> List[Bundle]:
+@mcp.tool(
+    name="get_all_bundles",
+    description="Fetch all available eSIM bundles from the Esim Hub.",
+    tags={"bundle", "esim", "esim hub"},
+    meta={"version": "1.0", "author": "samah.jamal@montymobile.com"},
+)
+async def get_all_bundles(ctx: Context) -> List[Bundle]:
     """Fetch all bundles from the Esim Hub."""
+    request = ctx.request_context.request
+    api_key = request.headers.get("authorization", "").replace("Bearer ", "").replace("bearer ", "")
     from config.utils import esim_hub_service_instance
-    service = esim_hub_service_instance()
+    service = esim_hub_service_instance(api_key=api_key)
     bundles = await service.get_all_bundles()
     # Ensure JSON-serializable return:
     # If Bundle is Pydantic v2:
     return [b.model_dump() for b in bundles]
 
 
-@mcp.tool
-async def search_bundles(keyword: str = None, country_name: str = None, gprs_from: str = None, gprs_to: str = None,
+@mcp.tool(
+    name="search_bundles",
+    description="Search eSIM bundles from the Esim Hub based on various criteria.",
+    tags={"bundle", "esim", "esim hub", "search"},
+    meta={"version": "1.0", "author": "samah.jamal@montymobile.com"},
+)
+async def search_bundles(ctx: Context, keyword: str = None, country_name: str = None, gprs_from: str = None,
+                         gprs_to: str = None,
                          currency_code: str = None, validity: str = None) -> List[Bundle]:
     """Search bundles from the Esim Hub.
         - keyword is optional.
@@ -77,13 +114,21 @@ async def search_bundles(keyword: str = None, country_name: str = None, gprs_fro
         - country_name is optional.
         - currency_code is optional.
     """
+    request = ctx.request_context.request
+    api_key = request.headers.get("authorization", "").replace("Bearer ", "").replace("bearer ", "")
+
     from config.utils import esim_hub_service_instance
-    service = esim_hub_service_instance()
+    service = esim_hub_service_instance(api_key=api_key)
     return await service.search_bundles(search_keyword=keyword, country_name=country_name, gprs_from=gprs_from,
                                         gprs_to=gprs_to, currency_code=currency_code, validity=validity)
 
 
-@mcp.tool
+@mcp.tool(
+    name="purchase_bundle_and_send_activation",
+    description="Purchase an eSIM bundle and email the activation details to the user.",
+    tags={"bundle", "esim", "purchase", "activation", "email"},
+    meta={"version": "1.0", "author": "samah.jamal@montymobile.comn"}
+)
 async def purchase_bundle_and_send_activation(user_email: str, bundle_code: str) -> dict:
     """End-to-end: purchase bundle, fetch activation code, build activation URL, and email it to the user."""
     from config.utils import esim_hub_service_instance
@@ -200,10 +245,13 @@ async def send_activation_url_via_email(user_email: str, activation_url: str) ->
 
 
 @mcp.tool
-async def get_order_history(user_email: str) -> List[dict]:
+async def get_order_history(ctx: Context, user_email: str) -> List[dict]:
     """Get order history for a given user email."""
+    request = ctx.request_context.request
+    api_key = request.headers.get("authorization", "").replace("Bearer ", "").replace("bearer ", "")
+
     from config.utils import esim_hub_service_instance
-    service = esim_hub_service_instance()
+    service = esim_hub_service_instance(api_key=api_key)
     return await service.get_order_history(user_email)
 
 
