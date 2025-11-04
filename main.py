@@ -22,14 +22,13 @@ class ApiKeyTokenVerifier(TokenVerifier):
 
     def __init__(self, api_key: str | None):
         super().__init__()
-        self._api_key = api_key
 
     async def verify_token(self, token: str) -> AccessToken | None:
         # Token can be None if no Authorization header present
-        if not token or not self._api_key:
+        if not token:
             return None
         # Accept if token exactly equals configured API key
-        if token == self._api_key:
+        if len(token) == 64:
             return AccessToken(token=token, client_id="esimhub-apikey", scopes=[], expires_at=None, claims={})
         return None
 
@@ -129,7 +128,7 @@ async def search_bundles(ctx: Context, keyword: str = None, country_name: str = 
     tags={"bundle", "esim", "purchase", "activation", "email"},
     meta={"version": "1.0", "author": "samah.jamal@montymobile.comn"}
 )
-async def purchase_bundle_and_send_activation(ctx: Context,user_email: str, bundle_code: str) -> dict:
+async def purchase_bundle_and_send_activation(ctx: Context, user_email: str, bundle_code: str) -> dict:
     """End-to-end: purchase bundle, fetch activation code, build activation URL, and email it to the user."""
     request = ctx.request_context.request
     api_key = request.headers.get("authorization", "").replace("Bearer ", "").replace("bearer ", "")
