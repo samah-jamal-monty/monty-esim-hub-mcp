@@ -129,8 +129,11 @@ async def search_bundles(ctx: Context, keyword: str = None, country_name: str = 
     tags={"bundle", "esim", "purchase", "activation", "email"},
     meta={"version": "1.0", "author": "samah.jamal@montymobile.comn"}
 )
-async def purchase_bundle_and_send_activation(user_email: str, bundle_code: str) -> dict:
+async def purchase_bundle_and_send_activation(ctx: Context,user_email: str, bundle_code: str) -> dict:
     """End-to-end: purchase bundle, fetch activation code, build activation URL, and email it to the user."""
+    request = ctx.request_context.request
+    api_key = request.headers.get("authorization", "").replace("Bearer ", "").replace("bearer ", "")
+
     from config.utils import esim_hub_service_instance
     from email_validator import validate_email, EmailNotValidError
 
@@ -140,7 +143,7 @@ async def purchase_bundle_and_send_activation(user_email: str, bundle_code: str)
     except EmailNotValidError as e:
         return {"success": False, "error": f"Invalid email: {str(e)}"}
 
-    service = esim_hub_service_instance()
+    service = esim_hub_service_instance(api_key=api_key)
 
     # 1) Create order
     order_result = await service.purchase_bundle(bundle_code, user_email)
