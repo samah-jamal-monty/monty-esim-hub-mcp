@@ -103,23 +103,15 @@ async def get_all_bundles(ctx: Context) -> List[Bundle]:
     tags={"bundle", "esim", "esim hub", "search"},
     meta={"version": "1.0", "author": "samah.jamal@montymobile.com"},
 )
-async def search_bundles(ctx: Context, keyword: str = None, country_name: str = None, gprs_from: str = None,
-                         gprs_to: str = None,
-                         currency_code: str = None, validity: str = None) -> List[Bundle]:
-    """Search bundles from the Esim Hub.
-        - keyword is optional.
-        - gprs from and gprs to are in MB or GB (e.g., '500MB', '2GB').
-        - validity is in days or years (e.g., '30 days', '1 year').
-        - country_name is optional.
-        - currency_code is optional.
-    """
+async def search_bundles(ctx: Context, keyword: str = None) -> List[Bundle]:
+    """Search for bundles matching the given keyword and optional filters."""
     request = ctx.request_context.request
     api_key = request.headers.get("authorization", "").replace("Bearer ", "").replace("bearer ", "")
 
     from config.utils import esim_hub_service_instance
     service = esim_hub_service_instance(api_key=api_key)
-    return await service.search_bundles(search_keyword=keyword, country_name=country_name, gprs_from=gprs_from,
-                                        gprs_to=gprs_to, currency_code=currency_code, validity=validity)
+    return await service.search_bundles(search_keyword=keyword, country_name=None, gprs_from=None,
+                                        gprs_to=None, currency_code=None, validity=None)
 
 
 @mcp.tool(
