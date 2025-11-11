@@ -10,7 +10,7 @@ from fastmcp import FastMCP, Context
 from fastmcp.server.auth import TokenVerifier, AccessToken
 from loguru import logger
 
-from config.utils import send_email, generate_qr_code
+from config.utils import send_email, generate_qr_code, get_token
 from dto.bundle import Bundle
 
 
@@ -82,13 +82,11 @@ def get_greeting() -> str:
 @mcp.tool(
     name="get_all_bundles",
     description="Fetch all available eSIM bundles from the Esim Hub.",
-    tags={"bundle", "esim", "esim hub"},
-    meta={"version": "1.0", "author": "samah.jamal@montymobile.com"},
+    tags={"bundle", "esim", "esim hub"}
 )
 async def get_all_bundles(ctx: Context) -> List[Bundle]:
     """Fetch all bundles from the Esim Hub."""
-    request = ctx.request_context.request
-    api_key = request.headers.get("authorization", "").replace("Bearer ", "").replace("bearer ", "")
+    api_key = get_token(ctx=ctx)
     from config.utils import esim_hub_service_instance
     service = esim_hub_service_instance(api_key=api_key)
     bundles = await service.get_all_bundles()
@@ -100,13 +98,11 @@ async def get_all_bundles(ctx: Context) -> List[Bundle]:
 @mcp.tool(
     name="search_bundles",
     description="Search eSIM bundles from the Esim Hub based on various criteria.",
-    tags={"bundle", "esim", "esim hub", "search"},
-    meta={"version": "1.0", "author": "samah.jamal@montymobile.com"},
+    tags={"bundle", "esim", "esim hub", "search"}
 )
 async def search_bundles(ctx: Context, keyword: str = None) -> List[Bundle]:
     """Search for bundles matching the given keyword and optional filters."""
-    request = ctx.request_context.request
-    api_key = request.headers.get("authorization", "").replace("Bearer ", "").replace("bearer ", "")
+    api_key = get_token(ctx=ctx)
 
     from config.utils import esim_hub_service_instance
     service = esim_hub_service_instance(api_key=api_key)
@@ -117,13 +113,11 @@ async def search_bundles(ctx: Context, keyword: str = None) -> List[Bundle]:
 @mcp.tool(
     name="purchase_bundle_and_send_activation",
     description="Purchase an eSIM bundle and email the activation details to the user.",
-    tags={"bundle", "esim", "purchase", "activation", "email"},
-    meta={"version": "1.0", "author": "samah.jamal@montymobile.comn"}
+    tags={"bundle", "esim", "purchase", "activation", "email"}
 )
 async def purchase_bundle_and_send_activation(ctx: Context, user_email: str, bundle_code: str) -> dict:
     """End-to-end: purchase bundle, fetch activation code, build activation URL, and email it to the user."""
-    request = ctx.request_context.request
-    api_key = request.headers.get("authorization", "").replace("Bearer ", "").replace("bearer ", "")
+    api_key = get_token(ctx=ctx)
 
     from config.utils import esim_hub_service_instance
     from email_validator import validate_email, EmailNotValidError
@@ -241,8 +235,7 @@ async def send_activation_url_via_email(user_email: str, activation_url: str) ->
 @mcp.tool
 async def get_order_history(ctx: Context, user_email: str) -> List[dict]:
     """Get order history for a given user email."""
-    request = ctx.request_context.request
-    api_key = request.headers.get("authorization", "").replace("Bearer ", "").replace("bearer ", "")
+    api_key = get_token(ctx=ctx)
 
     from config.utils import esim_hub_service_instance
     service = esim_hub_service_instance(api_key=api_key)

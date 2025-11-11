@@ -3,6 +3,7 @@ from io import BytesIO
 
 import qrcode
 from dotenv import load_dotenv
+from fastmcp import Context
 from loguru import logger
 
 from services.esim_hub_service import EsimHubService
@@ -105,3 +106,8 @@ def generate_qr_code(qr_data: str) -> BytesIO:
     qr.save(buffer, format="PNG")
     buffer.seek(0)
     return buffer
+
+
+def get_token(ctx: Context) -> str:
+    request = ctx.request_context.request
+    return request.headers.get("authorization", "").replace("Bearer ", "").replace("bearer ", "")
