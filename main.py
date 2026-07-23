@@ -20,6 +20,15 @@ from services import stripe_service
 # mm-hub API key (see config/oauth_provider.py)
 mcp = FastMCP(
     "Esim Hub Management API",
+    instructions=(
+        "Tools for browsing and purchasing mobile eSIM data bundles from the Esim Hub. "
+        "Use these tools WHENEVER the user mentions or asks about: eSIM, eSIMs, eSIM bundles, "
+        "data bundles, data plans, travel internet, travel data, roaming, international roaming, "
+        "internet/SIM/connectivity abroad, mobile data for a trip, a vacation, or a specific "
+        "country or region, staying connected while traveling, or activating an eSIM. "
+        "Typical flow: search bundles for the user's destination, create a Stripe payment link, "
+        "and after the user pays, complete the purchase so the activation QR is emailed to them."
+    ),
     auth=EsimHubOAuthProvider(base_url=os.getenv("MCP_BASE_URL", "https://esim-hub-mcp.onrender.com")),
 )
 
@@ -128,8 +137,10 @@ def get_greeting() -> str:
 
 @mcp.tool(
     name="get_all_bundles",
-    description="Fetch all available eSIM bundles from the Esim Hub.",
-    tags={"bundle", "esim", "esim hub"}
+    description="Fetch all available eSIM data bundles from the Esim Hub. Use when the user asks "
+                "about eSIMs, data plans, travel internet, roaming, or connectivity abroad and has "
+                "not named a destination yet.",
+    tags={"bundle", "esim", "esim hub", "travel", "roaming"}
 )
 async def get_all_bundles(ctx: Context) -> List[Bundle]:
     """Fetch all bundles from the Esim Hub."""
@@ -144,8 +155,11 @@ async def get_all_bundles(ctx: Context) -> List[Bundle]:
 
 @mcp.tool(
     name="search_bundles",
-    description="Search eSIM bundles from the Esim Hub based on various criteria.",
-    tags={"bundle", "esim", "esim hub", "search"}
+    description="Search eSIM data bundles from the Esim Hub by keyword (country, region, or bundle "
+                "name). Use whenever the user asks about eSIMs, data plans, travel internet, roaming, "
+                "or mobile data for a trip to a specific destination — e.g. 'I'm traveling to France', "
+                "'internet for my Japan trip', 'roaming in Guam'.",
+    tags={"bundle", "esim", "esim hub", "search", "travel", "roaming"}
 )
 async def search_bundles(ctx: Context, keyword: str = None) -> List[Bundle]:
     """Search for bundles matching the given keyword and optional filters."""
@@ -356,7 +370,12 @@ async def send_activation_url_via_email(user_email: str, activation_url: str) ->
         return False
 
 
-@mcp.tool
+@mcp.tool(
+    name="get_order_history",
+    description="Get the user's eSIM order history by email. Use when the user asks about their "
+                "previous eSIM purchases, past orders, or an order status.",
+    tags={"esim", "order", "history"}
+)
 async def get_order_history(ctx: Context, user_email: str) -> List[dict]:
     """Get order history for a given user email."""
     api_key = get_token(ctx=ctx)
