@@ -14,7 +14,8 @@ from config.utils import send_email, generate_qr_code, get_token
 from dto.bundle import Bundle
 
 # OAuth authorization server so Claude Desktop / claude.ai can connect as a
-# custom connector; issues ESIM_HUB_API_KEY as the access token (see config/oauth_provider.py)
+# custom connector; the Client Secret the user enters is passed through as their
+# mm-hub API key (see config/oauth_provider.py)
 mcp = FastMCP(
     "Esim Hub Management API",
     auth=EsimHubOAuthProvider(base_url=os.getenv("MCP_BASE_URL", "https://esim-hub-mcp.onrender.com")),

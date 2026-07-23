@@ -10,11 +10,8 @@ services:
     envVars:
       - key: ESIM_DIGITAL_SERVICE_URL
       - key: ESIM_MM_HUB_API_URL
-      - key: ESIM_HUB_API_KEY
       - key: ESIM_HUB_TENANT_KEY
       - key: MCP_BASE_URL
-      - key: MCP_OAUTH_CLIENT_ID
-      - key: MCP_OAUTH_CLIENT_SECRET
       - key: SMTP_SERVER
       - key: SMTP_PORT
       - key: SMTP_USE_TLS

@@ -84,8 +84,6 @@ esim-hub-mcp/
 | `SMTP_SENDER` | Sender email address | Recommended |
 | `SMTP_SENDER_NAME` | Sender display name | Recommended |
 | `MCP_BASE_URL` | Public URL of this server, used in OAuth metadata (defaults to the Render URL) | Recommended |
-| `MCP_OAUTH_CLIENT_ID` | Pre-configured OAuth client ID for Claude connectors | Optional |
-| `MCP_OAUTH_CLIENT_SECRET` | Pre-configured OAuth client secret for Claude connectors | Optional |
 
 ## Usage
 
@@ -99,16 +97,18 @@ python main.py --server_type=http --port 8000
 
 ### Connecting Claude Desktop / claude.ai (Custom Connector)
 
-The server is an OAuth 2.1 authorization server (see `config/oauth_provider.py`): Claude
-discovers `/.well-known/oauth-authorization-server`, completes an authorization-code +
-PKCE flow (auto-approved, no login page), and receives `ESIM_HUB_API_KEY` as its access
-token — which the tools then forward to the eSIM Hub as the API key.
+The server is an OAuth 2.1 authorization server (see `config/oauth_provider.py`) with
+pass-through, multi-tenant auth: **the OAuth Client Secret each user enters is their own
+mm-hub API key**. The flow auto-approves and issues that secret back as the access token,
+which the tools forward to the eSIM Hub on every call. The server does not validate the
+key itself — connecting always succeeds, and an invalid key fails later at the mm-hub call.
 
 1. In Claude Desktop (or claude.ai): **Settings → Connectors → Add custom connector**
 2. URL: `https://esim-hub-mcp.onrender.com/mcp`
-3. Either leave the OAuth fields blank (Claude registers itself via Dynamic Client
-   Registration), or open **Advanced settings** and enter the values of
-   `MCP_OAUTH_CLIENT_ID` / `MCP_OAUTH_CLIENT_SECRET` configured on the server.
+3. Open **Advanced settings** and fill both fields (they are required — Dynamic Client
+   Registration is disabled):
+   - **Client ID**: any value (e.g. your name)
+   - **Client Secret**: your mm-hub API key
 4. Click **Connect** — a browser window authorizes and redirects back automatically.
 
 The server will be available at:

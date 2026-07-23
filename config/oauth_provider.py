@@ -1,21 +1,24 @@
-"""OAuth 2.1 authorization server that bridges Claude's OAuth flow to the eSIM Hub API key.
+"""OAuth 2.1 authorization server that passes the user's Client Secret through as their token.
 
 Claude (Desktop and claude.ai custom connectors) authenticates remote MCP servers via
-OAuth: it discovers /.well-known/oauth-authorization-server, registers as a client (or
-uses the client id/secret entered in the connector's Advanced settings), runs an
-authorization-code + PKCE flow, and then sends the resulting access token as a bearer
-token on every MCP request.
+OAuth: it discovers /.well-known/oauth-authorization-server, runs an authorization-code +
+PKCE flow, and then sends the resulting access token as a bearer token on every MCP request.
 
-This provider auto-approves the authorization step (single-tenant server, no user login)
-and issues the configured ESIM_HUB_API_KEY as the access token, so tools that read the
-bearer token via get_token(ctx) keep receiving the mm-hub API key unchanged.
+This server is multi-tenant: each user's credential IS their mm-hub API key. The user
+enters any Client ID and their mm-hub API key as the Client Secret in Claude's connector
+Advanced settings. The flow auto-approves, and the token endpoint issues that same secret
+back as the access token, so tools that read the bearer via get_token(ctx) forward it to
+the mm hub. The server does not validate the key itself — the OAuth handshake always
+succeeds, and an invalid key simply fails later at the mm-hub call.
 """
 
-import os
 import secrets
 import time
+from contextvars import ContextVar
 
 from fastmcp.server.auth import OAuthProvider
+from mcp.server.auth.handlers.token import TokenHandler
+from mcp.server.auth.middleware.client_auth import ClientAuthenticator
 from mcp.server.auth.provider import (
     AccessToken,
     AuthorizationCode,
@@ -24,9 +27,10 @@ from mcp.server.auth.provider import (
     TokenError,
     construct_redirect_uri,
 )
-from mcp.server.auth.settings import ClientRegistrationOptions
+from mcp.server.auth.routes import TOKEN_PATH, cors_middleware
 from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
 from pydantic import AnyUrl
+from starlette.routing import Route
 
 # Claude's OAuth callback endpoints (Desktop and web both use these)
 CLAUDE_REDIRECT_URIS = [
@@ -36,42 +40,50 @@ CLAUDE_REDIRECT_URIS = [
 
 AUTH_CODE_TTL_SECONDS = 300
 
+# The plaintext client_secret from the current /token request. Set by
+# SecretCapturingAuthenticator and read by exchange_authorization_code, which both
+# run inside the same request task.
+_request_client_secret: ContextVar[str | None] = ContextVar("request_client_secret", default=None)
+
+
+class SecretCapturingAuthenticator(ClientAuthenticator):
+    """Captures the plaintext client_secret so it can be issued as the access token.
+
+    Secret comparison in the parent class is skipped because get_client always returns
+    a client with client_secret=None — any secret is accepted by design.
+    """
+
+    async def authenticate(self, client_id: str, client_secret: str | None) -> OAuthClientInformationFull:
+        _request_client_secret.set(client_secret)
+        return await super().authenticate(client_id, client_secret)
+
 
 class EsimHubOAuthProvider(OAuthProvider):
-    """Minimal in-memory OAuth provider for a single-tenant MCP server.
+    """Stateless pass-through OAuth provider for a multi-tenant MCP server.
 
-    Supports both a pre-configured client (MCP_OAUTH_CLIENT_ID / MCP_OAUTH_CLIENT_SECRET,
-    for Claude's Advanced settings fields) and Dynamic Client Registration (leave the
-    fields blank in Claude). Authorization codes and DCR clients live in memory only;
-    the static client and the access token survive restarts because both come from env.
+    Any client_id/client_secret pair is accepted; the secret is echoed back as the
+    access token. Dynamic Client Registration is disabled, so users must fill in the
+    Client ID and Client Secret fields in Claude's connector Advanced settings.
     """
 
     def __init__(self, base_url: str):
-        super().__init__(
-            base_url=base_url,
-            client_registration_options=ClientRegistrationOptions(enabled=True),
-        )
-        self._api_key = os.environ["ESIM_HUB_API_KEY"]
-        self._clients: dict[str, OAuthClientInformationFull] = {}
+        super().__init__(base_url=base_url)
         self._codes: dict[str, AuthorizationCode] = {}
 
-        static_id = os.getenv("MCP_OAUTH_CLIENT_ID")
-        static_secret = os.getenv("MCP_OAUTH_CLIENT_SECRET")
-        if static_id and static_secret:
-            self._clients[static_id] = OAuthClientInformationFull(
-                client_id=static_id,
-                client_secret=static_secret,
-                redirect_uris=CLAUDE_REDIRECT_URIS,
-            )
-
     async def get_client(self, client_id: str) -> OAuthClientInformationFull | None:
-        return self._clients.get(client_id)
+        # Every client_id "exists"; client_secret=None makes ClientAuthenticator
+        # accept whatever secret the user typed into Claude
+        return OAuthClientInformationFull(
+            client_id=client_id,
+            client_secret=None,
+            redirect_uris=CLAUDE_REDIRECT_URIS,
+        )
 
     async def register_client(self, client_info: OAuthClientInformationFull) -> None:
-        self._clients[client_info.client_id] = client_info
+        raise NotImplementedError("Dynamic client registration is disabled")
 
     async def authorize(self, client: OAuthClientInformationFull, params: AuthorizationParams) -> str:
-        # Single-tenant: no consent page, approve immediately and redirect back to Claude
+        # No consent page: approve immediately and redirect back to Claude
         now = time.time()
         self._codes = {c: v for c, v in self._codes.items() if v.expires_at > now}
 
@@ -101,12 +113,22 @@ class EsimHubOAuthProvider(OAuthProvider):
     ) -> OAuthToken:
         # Single-use: the PKCE challenge was already verified by the token handler
         self._codes.pop(authorization_code.code, None)
-        return OAuthToken(access_token=self._api_key, token_type="Bearer")
+
+        secret = _request_client_secret.get()
+        if not secret:
+            raise TokenError(
+                "invalid_request",
+                "client_secret is required: enter your mm-hub API key as the OAuth Client Secret",
+            )
+        # The user's secret IS their mm-hub API key; issue it back as the access token
+        return OAuthToken(access_token=secret, token_type="Bearer")
 
     async def load_access_token(self, token: str) -> AccessToken | None:
-        if secrets.compare_digest(token, self._api_key):
-            return AccessToken(token=token, client_id="esim-hub", scopes=[], expires_at=None)
-        return None
+        # Pass-through: any bearer token is accepted here and forwarded to the mm hub,
+        # which is the actual authorizer — an invalid key fails at the mm-hub call
+        if not token:
+            return None
+        return AccessToken(token=token, client_id="esim-hub-user", scopes=[], expires_at=None)
 
     async def load_refresh_token(
         self, client: OAuthClientInformationFull, refresh_token: str
@@ -120,5 +142,18 @@ class EsimHubOAuthProvider(OAuthProvider):
         raise TokenError("unsupported_grant_type", "Refresh tokens are not supported")
 
     async def revoke_token(self, token: AccessToken | RefreshToken) -> None:
-        # The access token is the upstream API key; revocation is a no-op
         pass
+
+    def get_routes(self, mcp_path=None, mcp_endpoint=None) -> list[Route]:
+        # Rebuild the /token route with the capturing authenticator so the plaintext
+        # client_secret is available to exchange_authorization_code
+        routes = super().get_routes(mcp_path, mcp_endpoint)
+        token_handler = TokenHandler(self, SecretCapturingAuthenticator(self))
+        for i, route in enumerate(routes):
+            if isinstance(route, Route) and route.path == TOKEN_PATH:
+                routes[i] = Route(
+                    TOKEN_PATH,
+                    endpoint=cors_middleware(token_handler.handle, ["POST", "OPTIONS"]),
+                    methods=["POST", "OPTIONS"],
+                )
+        return routes
