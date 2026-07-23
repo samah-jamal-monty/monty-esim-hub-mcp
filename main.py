@@ -4,38 +4,21 @@ import concurrent.futures
 import os
 from typing import List
 
-from fastapi import FastAPI
 from fastmcp import FastMCP, Context
-# Create an auth TokenVerifier that accepts the same ESIM_HUB_API_KEY used by the Esim Hub
-from fastmcp.server.auth import TokenVerifier, AccessToken
 from loguru import logger
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
+from config.oauth_provider import EsimHubOAuthProvider
 from config.utils import send_email, generate_qr_code, get_token
 from dto.bundle import Bundle
 
-
-class ApiKeyTokenVerifier(TokenVerifier):
-    """Simple TokenVerifier that accepts a single static API key (used as bearer token).
-
-    It validates that the bearer token equals the ESIM_HUB_API_KEY environment variable.
-    """
-
-    def __init__(self):
-        super().__init__()
-
-    async def verify_token(self, token: str) -> AccessToken | None:
-        # Token can be None if no Authorization header present
-        if not token:
-            return None
-        # Accept if token exactly equals configured API key
-        if len(token) == 64:
-            return AccessToken(token=token, client_id="esimhub-apikey", scopes=[], expires_at=None, claims={})
-        return None
-
-
-# Instantiate FastMCP with auth using the ESIM_HUB_API_KEY
-mcp = FastMCP("Esim Hub Management API", auth=ApiKeyTokenVerifier())
-api = FastAPI()
+# OAuth authorization server so Claude Desktop / claude.ai can connect as a
+# custom connector; issues ESIM_HUB_API_KEY as the access token (see config/oauth_provider.py)
+mcp = FastMCP(
+    "Esim Hub Management API",
+    auth=EsimHubOAuthProvider(base_url=os.getenv("MCP_BASE_URL", "https://esim-hub-mcp.onrender.com")),
+)
 
 # Module-level executor (shared/static across imports/instances)
 _email_executor: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(
@@ -46,14 +29,9 @@ _email_executor: concurrent.futures.ThreadPoolExecutor = concurrent.futures.Thre
 atexit.register(lambda: _email_executor.shutdown(wait=False))
 
 
-@api.get("/")
-def health():
-    return {"status": "ok"}
-
-
-# Mount MCP HTTP transport on /mcp instead of /
-# api.mount("/mcp", mcp.http_app())
-# app = api
+@mcp.custom_route("/", methods=["GET"])
+async def health(request: Request) -> JSONResponse:
+    return JSONResponse({"status": "ok"})
 
 
 @mcp.prompt

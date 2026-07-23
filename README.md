@@ -83,6 +83,9 @@ esim-hub-mcp/
 | `SMTP_PASSWORD` | SMTP password | Yes (for email) |
 | `SMTP_SENDER` | Sender email address | Recommended |
 | `SMTP_SENDER_NAME` | Sender display name | Recommended |
+| `MCP_BASE_URL` | Public URL of this server, used in OAuth metadata (defaults to the Render URL) | Recommended |
+| `MCP_OAUTH_CLIENT_ID` | Pre-configured OAuth client ID for Claude connectors | Optional |
+| `MCP_OAUTH_CLIENT_SECRET` | Pre-configured OAuth client secret for Claude connectors | Optional |
 
 ## Usage
 
@@ -91,8 +94,22 @@ esim-hub-mcp/
 Start the MCP server via the included runner (binds to 0.0.0.0 and respects PORT env var):
 
 ```bash
-python main.py --server_type=sse --port 8000
+python main.py --server_type=http --port 8000
 ```
+
+### Connecting Claude Desktop / claude.ai (Custom Connector)
+
+The server is an OAuth 2.1 authorization server (see `config/oauth_provider.py`): Claude
+discovers `/.well-known/oauth-authorization-server`, completes an authorization-code +
+PKCE flow (auto-approved, no login page), and receives `ESIM_HUB_API_KEY` as its access
+token — which the tools then forward to the eSIM Hub as the API key.
+
+1. In Claude Desktop (or claude.ai): **Settings → Connectors → Add custom connector**
+2. URL: `https://esim-hub-mcp.onrender.com/mcp`
+3. Either leave the OAuth fields blank (Claude registers itself via Dynamic Client
+   Registration), or open **Advanced settings** and enter the values of
+   `MCP_OAUTH_CLIENT_ID` / `MCP_OAUTH_CLIENT_SECRET` configured on the server.
+4. Click **Connect** — a browser window authorizes and redirects back automatically.
 
 The server will be available at:
 - **REST API**: http://localhost:8000

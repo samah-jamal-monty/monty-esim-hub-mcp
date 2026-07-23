@@ -1,14 +1,17 @@
 import asyncio
+import os
 from typing import List
 
+from dotenv import load_dotenv
 from fastmcp import Client, FastMCP
 from mcp import Tool
 
 # In-memory server (ideal for testing)
 server = FastMCP("TestServer")
 
-# HTTP server
-client = Client("http://localhost:8181/mcp")
+# HTTP server — bearer token is the eSIM Hub API key, loaded from .env
+load_dotenv()
+client = Client("https://esim-hub-mcp.onrender.com/mcp", auth=os.environ["ESIM_HUB_API_KEY"])
 # Local Python script
 # client = Client("main.py")
 
@@ -27,8 +30,8 @@ async def main():
         # prompts = await client.list_prompts()
 
         # Execute operations
-        # result = await client.call_tool("get_all_bundles")
-        # print(result)
+        result = await client.call_tool("get_all_bundles")
+        print(result)
         # purchase = await client.call_tool("purchase_bundle",
         #                                   arguments={"bundle_code": "50fc41bf-e9a7-4d8a-8104-963012c63900"})
         # print(purchase)
