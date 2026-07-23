@@ -55,6 +55,11 @@ def create_checkout_session(bundle_code: str, bundle_name: str, amount: float,
     return {"payment_session_id": session.id, "payment_url": session.url}
 
 
+def parse_webhook_event(payload: bytes, signature_header: str) -> stripe.Event:
+    """Verify the Stripe-Signature header and return the event. Raises on bad signature."""
+    return stripe.Webhook.construct_event(payload, signature_header, os.environ["STRIPE_WEBHOOK_KEY"])
+
+
 def get_session(session_id: str) -> stripe.checkout.Session | None:
     _init()
     try:

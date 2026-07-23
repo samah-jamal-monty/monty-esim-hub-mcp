@@ -47,6 +47,31 @@ async def payment_success(request: Request) -> HTMLResponse:
     )
 
 
+@mcp.custom_route("/payment/webhook", methods=["POST"])
+async def stripe_webhook(request: Request) -> JSONResponse:
+    """Signature-verified Stripe webhook. Records payment events; fulfillment itself
+    happens in purchase_bundle_and_send_activation, which re-verifies with Stripe."""
+    payload = await request.body()
+    signature = request.headers.get("stripe-signature", "")
+    try:
+        event = await asyncio.to_thread(stripe_service.parse_webhook_event, payload, signature)
+    except Exception as e:
+        logger.warning(f"Rejected Stripe webhook: {str(e)}")
+        return JSONResponse({"error": "invalid signature"}, status_code=400)
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        metadata = session["metadata"] if "metadata" in session else None
+        logger.info(
+            f"payment completed: session={session['id']} "
+            f"bundle={stripe_service.metadata_value(metadata, 'bundle_code')} "
+            f"email={stripe_service.metadata_value(metadata, 'user_email')}"
+        )
+    else:
+        logger.info(f"stripe webhook event: {event['type']}")
+    return JSONResponse({"received": True})
+
+
 @mcp.custom_route("/payment/cancel", methods=["GET"])
 async def payment_cancel(request: Request) -> HTMLResponse:
     return HTMLResponse(

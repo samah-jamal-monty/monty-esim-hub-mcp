@@ -85,6 +85,7 @@ esim-hub-mcp/
 | `SMTP_SENDER_NAME` | Sender display name | Recommended |
 | `MCP_BASE_URL` | Public URL of this server, used in OAuth metadata (defaults to the Render URL) | Recommended |
 | `STRIPE_SK_KEY` | Stripe secret key used to create and verify Checkout payments | Yes |
+| `STRIPE_WEBHOOK_KEY` | Stripe webhook signing secret (`whsec_...`) for `POST /payment/webhook` | Yes (for webhooks) |
 
 ## Usage
 
