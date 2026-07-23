@@ -8,7 +8,7 @@ from typing import List
 from fastmcp import FastMCP, Context
 from loguru import logger
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, JSONResponse
+from starlette.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from config.oauth_provider import EsimHubOAuthProvider
 from config.utils import send_email, generate_qr_code, get_token
@@ -45,6 +45,23 @@ async def payment_success(request: Request) -> HTMLResponse:
         "<p>Go back to your Claude conversation and confirm the payment to receive your eSIM.</p>"
         "</body></html>"
     )
+
+
+@mcp.custom_route("/pay/{session_id}", methods=["GET"])
+async def pay_redirect(request: Request):
+    """Short, chat-safe payment link that redirects to the live Stripe Checkout URL."""
+    session_id = request.path_params["session_id"]
+    session = await asyncio.to_thread(stripe_service.get_session, session_id)
+    if session is None or session.status != "open" or not session.url:
+        return HTMLResponse(
+            "<html><body style='font-family:sans-serif;text-align:center;padding-top:4rem'>"
+            "<h1>Payment link unavailable</h1>"
+            "<p>This payment link is invalid, expired, or already paid. "
+            "Go back to your Claude conversation and ask for a new one.</p>"
+            "</body></html>",
+            status_code=404,
+        )
+    return RedirectResponse(session.url)
 
 
 @mcp.custom_route("/payment/webhook", methods=["POST"])

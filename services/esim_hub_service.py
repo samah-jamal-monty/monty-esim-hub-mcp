@@ -77,7 +77,7 @@ class EsimHubService:
         }
         logger.info(f"getting bundle {bundle_code} from {url}")
         async with httpx.AsyncClient() as client:
-            response = await client.get(url=url, headers=self.__headers, params=params)
+            response = await client.get(url=url, headers=self.__headers, params=params, timeout=60)
         if response.status_code != 200:
             logger.error(f"Failed to fetch bundle {bundle_code}: {response.status_code} {response.text}")
             return None

@@ -52,7 +52,14 @@ def create_checkout_session(bundle_code: str, bundle_name: str, amount: float,
         cancel_url=f"{_base_url()}/payment/cancel",
     )
     logger.info(f"created checkout session {session.id} for bundle {bundle_code} ({amount} {currency_code})")
-    return {"payment_session_id": session.id, "payment_url": session.url}
+    # Serve a short /pay/<id> link instead of session.url: the raw Stripe URL is ~400
+    # chars with a %-encoded fragment that chat clients routinely truncate, which lands
+    # users on Stripe's "page could not be found" screen
+    return {
+        "payment_session_id": session.id,
+        "payment_url": f"{_base_url()}/pay/{session.id}",
+        "stripe_checkout_url": session.url,
+    }
 
 
 def parse_webhook_event(payload: bytes, signature_header: str) -> stripe.Event:
