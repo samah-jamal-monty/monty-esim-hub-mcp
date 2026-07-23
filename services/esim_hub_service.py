@@ -68,6 +68,21 @@ class EsimHubService:
             logger.error(f"Failed to fetch bundles: {response.status_code} {response.text}")
             return []
 
+    async def get_bundle_by_code(self, bundle_code: str, currency_code: str = "USD") -> dict | None:
+        """Fetch a single bundle (raw API item, including numeric price) by its record GUID."""
+        url = f"{self.__digital_service_url}{EsimHubEndpoint.API_GET_BUNDLE_BY_ID}"
+        params = {
+            "recordGuid": bundle_code,
+            "CurrencyCode": currency_code,
+        }
+        logger.info(f"getting bundle {bundle_code} from {url}")
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url=url, headers=self.__headers, params=params)
+        if response.status_code != 200:
+            logger.error(f"Failed to fetch bundle {bundle_code}: {response.status_code} {response.text}")
+            return None
+        return response.json().get("data", {}).get("item")
+
     async def purchase_bundle(self, bundle_code: str, user_email: str) -> dict:
         if not self.check_bundle_applicability(bundle_code):
             return {"success": False, "error": "Bundle not available for purchase"}

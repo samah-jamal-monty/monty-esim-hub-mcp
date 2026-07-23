@@ -84,6 +84,7 @@ esim-hub-mcp/
 | `SMTP_SENDER` | Sender email address | Recommended |
 | `SMTP_SENDER_NAME` | Sender display name | Recommended |
 | `MCP_BASE_URL` | Public URL of this server, used in OAuth metadata (defaults to the Render URL) | Recommended |
+| `STRIPE_SK_KEY` | Stripe secret key used to create and verify Checkout payments | Yes |
 
 ## Usage
 
@@ -124,20 +125,29 @@ The server will be available at:
 #### MCP Tools
 The following tools are available through the MCP interface:
 
-1. **test()**: Test connectivity to the API
-   - Returns: `{"message": "The API is working!"}`
-
-2. **get_all_bundles()**: Fetch all available eSIM bundles
+1. **get_all_bundles()**: Fetch all available eSIM bundles
    - Returns: List of bundle objects with details like name, price, data allowance, etc.
 
-3. **purchase_bundle(user_email: str, bundle_code: str)**: Purchase an eSIM bundle
-   - Parameters: `user_email` and `bundle_code`
+2. **search_bundles(keyword: str)**: Search bundles by keyword
 
-4. **purchase_bundle_and_send_activation(user_email: str, bundle_code: str)**: One-call flow to purchase, fetch activation code, build activation URL, and email it to the user.
+3. **create_payment_link(bundle_code: str, user_email: str)**: Create a Stripe Checkout payment
+   link for a bundle, priced server-side from the eSIM Hub. Returns `payment_url` (for the user
+   to pay) and `payment_session_id` (for the purchase step).
 
-5. **get_activation_code(order_id: str)**: Get activation code for an order
+4. **purchase_bundle_and_send_activation(payment_session_id: str)**: Verifies the Stripe payment
+   is completed, then creates the reseller order, fetches the activation code, and emails the
+   activation QR to the user. The bundle and email are taken from the paid session's metadata,
+   and each payment can fund only one order.
 
-6. **send_activation_url_via_email(user_email: str, activation_url: str)**: Email the activation URL to the user
+5. **send_activation_url_via_email(user_email: str, activation_url: str)**: Email the activation URL to the user
+
+6. **get_order_history(user_email: str)**: Get order history for a user
+
+#### Purchase Flow (payment-first)
+1. User picks a bundle → `create_payment_link` returns a Stripe URL
+2. User pays through the link (Stripe Checkout)
+3. User confirms → `purchase_bundle_and_send_activation(payment_session_id)` verifies
+   `payment_status == "paid"`, creates the order, and emails the activation details
 
 ### Example Usage
 

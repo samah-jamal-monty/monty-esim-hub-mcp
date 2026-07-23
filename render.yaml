@@ -12,6 +12,7 @@ services:
       - key: ESIM_MM_HUB_API_URL
       - key: ESIM_HUB_TENANT_KEY
       - key: MCP_BASE_URL
+      - key: STRIPE_SK_KEY
       - key: SMTP_SERVER
       - key: SMTP_PORT
       - key: SMTP_USE_TLS
