@@ -6,6 +6,34 @@ A FastAPI-based Model Context Protocol (MCP) server that provides tools for mana
 
 This project implements an MCP server that exposes eSIM Hub functionality as tools that can be used by AI assistants and other MCP clients. It provides a REST API interface and MCP tools for fetching and purchasing eSIM bundles.
 
+## Architecture
+
+### High-Level Design
+
+All components and how they connect — the Claude MCP client with OAuth pass-through auth, the
+FastMCP server internals (OAuth authorization server, tools, HTTP routes, services), and the
+external systems (Stripe, eSIM Hub platform, SMTP):
+
+![High-Level Design](docs/esim-hub-mcp-hld.png)
+
+### Purchase Flow (sequence)
+
+The payment-first purchase end to end: discovery → payment link → Stripe Checkout → verified
+fulfillment, including the unpaid / already-fulfilled rejection branches:
+
+![Purchase Flow Sequence](docs/purchase-flow-sequence.png)
+
+Editable sources: [`docs/esim-hub-mcp-hld.drawio`](docs/esim-hub-mcp-hld.drawio) and
+[`docs/purchase-flow-sequence.drawio`](docs/purchase-flow-sequence.drawio) (open in
+[draw.io](https://app.diagrams.net)). A Mermaid version of the sequence diagram is also available
+at [`docs/purchase-flow-sequence.mmd`](docs/purchase-flow-sequence.mmd).
+
+To re-export the PNGs after editing:
+
+```bash
+drawio -x -f png -s 2 --border 20 -o docs/<name>.png docs/<name>.drawio
+```
+
 ## Features
 
 - **MCP Tools Integration**: Exposes eSIM Hub operations as MCP tools
