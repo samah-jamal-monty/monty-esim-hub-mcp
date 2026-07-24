@@ -1,0 +1,54 @@
+sequenceDiagram
+    autonumber
+    actor User as End User
+    participant Claude as Claude (MCP client)
+    participant MCP as eSIM Hub MCP Server
+    participant Stripe
+    participant Hub as eSIM Hub APIs (catalog + MM Hub)
+    participant SMTP as SMTP (Gmail)
+
+    Note over Claude,MCP: Connected via OAuth pass-through —<br/>bearer token = user's mm-hub API key
+
+    User->>Claude: "I need an eSIM for France"
+    Claude->>MCP: search_bundles(keyword)
+    MCP->>Hub: search catalog (Api-Key = bearer token)
+    Hub-->>MCP: matching bundles
+    MCP-->>Claude: bundle list (name, price, validity, data)
+    Claude-->>User: options — user picks one + gives email
+
+    Claude->>MCP: create_payment_link(bundle_code, user_email)
+    MCP->>Hub: get bundle by code (server-side price — never trusted from the model)
+    Hub-->>MCP: price + currency + name
+    MCP->>Stripe: create Checkout Session<br/>(amount, metadata: bundle_code + user_email)
+    Stripe-->>MCP: session id + checkout URL
+    MCP-->>Claude: short link /pay/{session_id} + payment_session_id
+    Claude-->>User: payment link
+
+    User->>MCP: open GET /pay/{session_id}
+    MCP->>Stripe: retrieve session
+    MCP-->>User: 302 → Stripe Checkout page
+    User->>Stripe: pay (card)
+    Stripe-->>User: redirect → /payment/success page
+    Stripe--)MCP: webhook checkout.session.completed (signature-verified, logged)
+
+    User->>Claude: "I paid"
+    Claude->>MCP: purchase_bundle_and_send_activation(payment_session_id)
+    MCP->>Stripe: retrieve session + PaymentIntent
+
+    alt session not found or payment_status != paid
+        MCP-->>Claude: error — payment not completed, ask user to pay first
+    else already fulfilled (PaymentIntent has esim_order_id)
+        MCP-->>Claude: error — payment already used for order X
+    else paid and unfulfilled
+        Note over MCP: bundle_code + user_email are read from the<br/>paid session's metadata — order always matches payment
+        MCP->>Hub: create reseller order (bundle, email)
+        Hub-->>MCP: orderId + SMDP+ address
+        MCP->>Stripe: stamp esim_order_id on PaymentIntent<br/>(one payment = one order, survives restarts)
+        MCP->>Hub: get activation code (orderId)
+        Hub-->>MCP: activation code
+        Note over MCP: build LPA URL<br/>LPA:1$smdp$code + QR image
+        MCP->>SMTP: send activation email (QR attached)
+        SMTP-->>User: activation email in inbox
+        MCP-->>Claude: success (orderId, activation_url, email_sent)
+        Claude-->>User: "Your eSIM is ready — check your email"
+    end
