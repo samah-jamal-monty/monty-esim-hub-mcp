@@ -1,0 +1,200 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="purchase-flow-seq" name="Purchase Flow — Sequence">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1560" pageHeight="1850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="&lt;b&gt;eSIM Purchase Flow — Payment-First Sequence&lt;/b&gt;" style="text;html=1;fontSize=18;align=left;" vertex="1" parent="1">
+          <mxGeometry x="30" y="0" width="600" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Participant headers ===== -->
+        <mxCell id="pUser" value="&lt;b&gt;End User&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="pClaude" value="&lt;b&gt;Claude&lt;/b&gt;&lt;br&gt;(MCP client)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="260" y="40" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="pMcp" value="&lt;b&gt;eSIM Hub MCP Server&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="550" y="40" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="pStripe" value="&lt;b&gt;Stripe&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E6E5FF;strokeColor=#635BFF;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="900" y="40" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="pHub" value="&lt;b&gt;eSIM Hub APIs&lt;/b&gt;&lt;br&gt;(catalog + MM Hub)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1130" y="40" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="pSmtp" value="&lt;b&gt;SMTP&lt;/b&gt;&lt;br&gt;(Gmail)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="40" width="120" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Lifelines ===== -->
+        <mxCell id="llUser" style="endArrow=none;dashed=1;html=1;strokeColor=#9673A6;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="100" y="90" as="sourcePoint" /><mxPoint x="100" y="1780" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="llClaude" style="endArrow=none;dashed=1;html=1;strokeColor=#9673A6;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="90" as="sourcePoint" /><mxPoint x="340" y="1780" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="llMcp" style="endArrow=none;dashed=1;html=1;strokeColor=#6C8EBF;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="90" as="sourcePoint" /><mxPoint x="640" y="1780" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="llStripe" style="endArrow=none;dashed=1;html=1;strokeColor=#635BFF;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="960" y="90" as="sourcePoint" /><mxPoint x="960" y="1780" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="llHub" style="endArrow=none;dashed=1;html=1;strokeColor=#82B366;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1220" y="90" as="sourcePoint" /><mxPoint x="1220" y="1780" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="llSmtp" style="endArrow=none;dashed=1;html=1;strokeColor=#D79B00;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1430" y="90" as="sourcePoint" /><mxPoint x="1430" y="1780" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <!-- ===== Top note ===== -->
+        <mxCell id="note1" value="Connected via OAuth pass-through — bearer token = user&#39;s mm-hub API key" style="shape=note;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;size=14;" vertex="1" parent="1">
+          <mxGeometry x="270" y="100" width="440" height="36" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Phase 1: discovery ===== -->
+        <mxCell id="m1" value="1. &quot;I need an eSIM for France&quot;" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="100" y="170" as="sourcePoint" /><mxPoint x="340" y="170" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m2" value="2. search_bundles(keyword)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="210" as="sourcePoint" /><mxPoint x="640" y="210" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m3" value="3. search catalog (Api-Key = bearer token)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="250" as="sourcePoint" /><mxPoint x="1220" y="250" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m4" value="4. matching bundles" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1220" y="290" as="sourcePoint" /><mxPoint x="640" y="290" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m5" value="5. bundle list (name, price, validity, data)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="330" as="sourcePoint" /><mxPoint x="340" y="330" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m6" value="6. options — user picks a bundle + gives email" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="370" as="sourcePoint" /><mxPoint x="100" y="370" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <!-- ===== Phase 2: payment link ===== -->
+        <mxCell id="m7" value="7. create_payment_link(bundle_code, user_email)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="420" as="sourcePoint" /><mxPoint x="640" y="420" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m8" value="8. get bundle by code (server-side price — never trusted from the model)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="460" as="sourcePoint" /><mxPoint x="1220" y="460" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m9" value="9. price + currency + name" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1220" y="500" as="sourcePoint" /><mxPoint x="640" y="500" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m10" value="10. create Checkout Session (amount, metadata: bundle_code + user_email)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="540" as="sourcePoint" /><mxPoint x="960" y="540" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m11" value="11. session id + checkout URL" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="960" y="580" as="sourcePoint" /><mxPoint x="640" y="580" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m12" value="12. short link /pay/{session_id} + payment_session_id" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="620" as="sourcePoint" /><mxPoint x="340" y="620" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m13" value="13. payment link" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="660" as="sourcePoint" /><mxPoint x="100" y="660" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <!-- ===== Phase 3: payment ===== -->
+        <mxCell id="m14" value="14. open GET /pay/{session_id}" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="100" y="710" as="sourcePoint" /><mxPoint x="640" y="710" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m15" value="15. 302 → Stripe Checkout page" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="750" as="sourcePoint" /><mxPoint x="100" y="750" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m16" value="16. pay (card)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="100" y="790" as="sourcePoint" /><mxPoint x="960" y="790" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m17" value="17. redirect → /payment/success page" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="960" y="830" as="sourcePoint" /><mxPoint x="100" y="830" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m18" value="18. webhook: checkout.session.completed (async, signature-verified, logged)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;fontStyle=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="960" y="870" as="sourcePoint" /><mxPoint x="640" y="870" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <!-- ===== Phase 4: fulfillment ===== -->
+        <mxCell id="m19" value="19. &quot;I paid&quot;" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="100" y="920" as="sourcePoint" /><mxPoint x="340" y="920" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m20" value="20. purchase_bundle_and_send_activation(payment_session_id)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="960" as="sourcePoint" /><mxPoint x="640" y="960" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m21" value="21. retrieve session + PaymentIntent" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="1000" as="sourcePoint" /><mxPoint x="960" y="1000" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m22" value="22. payment_status + fulfillment metadata" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="960" y="1040" as="sourcePoint" /><mxPoint x="640" y="1040" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <!-- ===== alt fragment ===== -->
+        <mxCell id="altFrame" value="alt" style="shape=umlFrame;whiteSpace=wrap;html=1;width=60;height=30;fontSize=12;fontStyle=1;fillColor=none;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="30" y="1080" width="1480" height="650" as="geometry" />
+        </mxCell>
+
+        <mxCell id="altLabel1" value="[ payment not completed / session not found ]" style="text;html=1;fontSize=11;fontStyle=2;align=left;" vertex="1" parent="1">
+          <mxGeometry x="110" y="1085" width="360" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="m23" value="23. error — payment not completed, ask the user to pay first" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="1140" as="sourcePoint" /><mxPoint x="340" y="1140" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="altDiv1" style="endArrow=none;dashed=1;dashPattern=6 4;html=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="30" y="1170" as="sourcePoint" /><mxPoint x="1510" y="1170" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="altLabel2" value="[ already fulfilled — PaymentIntent carries esim_order_id ]" style="text;html=1;fontSize=11;fontStyle=2;align=left;" vertex="1" parent="1">
+          <mxGeometry x="50" y="1175" width="420" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="m24" value="24. error — payment already used for order X" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="1230" as="sourcePoint" /><mxPoint x="340" y="1230" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="altDiv2" style="endArrow=none;dashed=1;dashPattern=6 4;html=1;strokeColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="30" y="1260" as="sourcePoint" /><mxPoint x="1510" y="1260" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="altLabel3" value="[ paid and unfulfilled ]" style="text;html=1;fontSize=11;fontStyle=2;align=left;" vertex="1" parent="1">
+          <mxGeometry x="50" y="1265" width="240" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note2" value="bundle_code + user_email are read from the paid session&#39;s metadata — the order always matches what was paid for" style="shape=note;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;size=14;" vertex="1" parent="1">
+          <mxGeometry x="450" y="1295" width="380" height="44" as="geometry" />
+        </mxCell>
+
+        <mxCell id="m25" value="25. create reseller order (bundle, email)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="1380" as="sourcePoint" /><mxPoint x="1220" y="1380" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m26" value="26. orderId + SMDP+ address" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1220" y="1420" as="sourcePoint" /><mxPoint x="640" y="1420" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m27" value="27. stamp esim_order_id on PaymentIntent (one payment = one order, survives restarts)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="1460" as="sourcePoint" /><mxPoint x="960" y="1460" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m28" value="28. get activation code (orderId)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="1500" as="sourcePoint" /><mxPoint x="1220" y="1500" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m29" value="29. activation code" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1220" y="1540" as="sourcePoint" /><mxPoint x="640" y="1540" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="note3" value="build LPA activation URL (LPA:1$smdp$code) + QR image" style="shape=note;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;size=14;" vertex="1" parent="1">
+          <mxGeometry x="480" y="1560" width="320" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="m30" value="30. send activation email (QR attached)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="1630" as="sourcePoint" /><mxPoint x="1430" y="1630" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m31" value="31. activation email in inbox" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="1430" y="1665" as="sourcePoint" /><mxPoint x="100" y="1665" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m32" value="32. success (orderId, activation_url, email_sent)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="1695" as="sourcePoint" /><mxPoint x="340" y="1695" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="m33" value="33. &quot;Your eSIM is ready — check your email&quot;" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="1720" as="sourcePoint" /><mxPoint x="100" y="1720" as="targetPoint" /></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
