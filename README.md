@@ -10,9 +10,8 @@ This project implements an MCP server that exposes eSIM Hub functionality as too
 
 ### High-Level Design
 
-All components and how they connect — the Claude MCP client with OAuth pass-through auth, the
-FastMCP server internals (OAuth authorization server, tools, HTTP routes, services), and the
-external systems (Stripe, eSIM Hub platform, SMTP):
+All components and how they connect — the Claude MCP client, the FastMCP server internals
+(tools, HTTP routes, services), and the external systems (Stripe, eSIM Hub platform, SMTP):
 
 ![High-Level Design](docs/esim-hub-mcp-hld.png)
 
@@ -111,7 +110,7 @@ esim-hub-mcp/
 | `SMTP_PASSWORD` | SMTP password | Yes (for email) |
 | `SMTP_SENDER` | Sender email address | Recommended |
 | `SMTP_SENDER_NAME` | Sender display name | Recommended |
-| `MCP_BASE_URL` | Public URL of this server, used in OAuth metadata (defaults to the Render URL) | Recommended |
+| `MCP_BASE_URL` | Public URL of this server, used in Stripe payment redirect links (defaults to the Render URL) | Recommended |
 | `STRIPE_SK_KEY` | Stripe secret key used to create and verify Checkout payments | Yes |
 | `STRIPE_WEBHOOK_KEY` | Stripe webhook signing secret (`whsec_...`) for `POST /payment/webhook` | Yes (for webhooks) |
 
@@ -127,19 +126,13 @@ python main.py --server_type=http --port 8000
 
 ### Connecting Claude Desktop / claude.ai (Custom Connector)
 
-The server is an OAuth 2.1 authorization server (see `config/oauth_provider.py`) with
-pass-through, multi-tenant auth: **the OAuth Client Secret each user enters is their own
-mm-hub API key**. The flow auto-approves and issues that secret back as the access token,
-which the tools forward to the eSIM Hub on every call. The server does not validate the
-key itself — connecting always succeeds, and an invalid key fails later at the mm-hub call.
+The server does not require any authentication from the MCP client: the mm-hub API key is
+read from the `ESIM_HUB_API_KEY` environment variable on the server and used for all calls
+to the eSIM Hub.
 
 1. In Claude Desktop (or claude.ai): **Settings → Connectors → Add custom connector**
 2. URL: `https://esim-hub-mcp.onrender.com/mcp`
-3. Open **Advanced settings** and fill both fields (they are required — Dynamic Client
-   Registration is disabled):
-   - **Client ID**: any value (e.g. your name)
-   - **Client Secret**: your mm-hub API key
-4. Click **Connect** — a browser window authorizes and redirects back automatically.
+3. Click **Connect** — no OAuth or credentials are needed.
 
 The server will be available at:
 - **REST API**: http://localhost:8000

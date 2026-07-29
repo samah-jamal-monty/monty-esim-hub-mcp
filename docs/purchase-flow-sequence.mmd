@@ -7,11 +7,11 @@ sequenceDiagram
     participant Hub as eSIM Hub APIs (catalog + MM Hub)
     participant SMTP as SMTP (Gmail)
 
-    Note over Claude,MCP: Connected via OAuth pass-through —<br/>bearer token = user's mm-hub API key
+    Note over Claude,MCP: No client auth — the server reads the<br/>mm-hub API key from ESIM_HUB_API_KEY
 
     User->>Claude: "I need an eSIM for France"
     Claude->>MCP: search_bundles(keyword)
-    MCP->>Hub: search catalog (Api-Key = bearer token)
+    MCP->>Hub: search catalog (Api-Key from env)
     Hub-->>MCP: matching bundles
     MCP-->>Claude: bundle list (name, price, validity, data)
     Claude-->>User: options — user picks one + gives email

@@ -3,7 +3,6 @@ from io import BytesIO
 
 import qrcode
 from dotenv import load_dotenv
-from fastmcp import Context
 from loguru import logger
 
 from services.esim_hub_service import EsimHubService
@@ -21,11 +20,11 @@ USERNAME = os.getenv("SMTP_USERNAME", "<EMAIL>")
 PASSWORD = os.getenv("SMTP_PASSWORD", "<PASSWORD>")
 
 
-def esim_hub_service_instance(api_key: str) -> EsimHubService:
+def esim_hub_service_instance() -> EsimHubService:
     return EsimHubService(
         digital_service_url=os.getenv("ESIM_DIGITAL_SERVICE_URL"),
         mm_hub_url=os.getenv("ESIM_MM_HUB_API_URL"),
-        api_key=api_key,
+        api_key=os.getenv("ESIM_HUB_API_KEY"),
         tenant_key=os.getenv("ESIM_HUB_TENANT_KEY")
     )
 
@@ -106,8 +105,3 @@ def generate_qr_code(qr_data: str) -> BytesIO:
     qr.save(buffer, format="PNG")
     buffer.seek(0)
     return buffer
-
-
-def get_token(ctx: Context) -> str:
-    request = ctx.request_context.request
-    return request.headers.get("authorization", "").replace("Bearer ", "").replace("bearer ", "")

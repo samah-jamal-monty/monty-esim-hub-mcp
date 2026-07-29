@@ -5,19 +5,15 @@ import concurrent.futures
 import os
 from typing import List
 
-from fastmcp import FastMCP, Context
+from fastmcp import FastMCP
 from loguru import logger
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, RedirectResponse
 
-from config.oauth_provider import EsimHubOAuthProvider
-from config.utils import send_email, generate_qr_code, get_token
+from config.utils import send_email, generate_qr_code
 from dto.bundle import Bundle
 from services import stripe_service
 
-# OAuth authorization server so Claude Desktop / claude.ai can connect as a
-# custom connector; the Client Secret the user enters is passed through as their
-# mm-hub API key (see config/oauth_provider.py)
 mcp = FastMCP(
     "Esim Hub Management API",
     instructions=(
@@ -29,7 +25,6 @@ mcp = FastMCP(
         "Typical flow: search bundles for the user's destination, create a Stripe payment link, "
         "and after the user pays, complete the purchase so the activation QR is emailed to them."
     ),
-    auth=EsimHubOAuthProvider(base_url=os.getenv("MCP_BASE_URL", "https://esim-hub-mcp.onrender.com")),
 )
 
 # Module-level executor (shared/static across imports/instances)
@@ -142,11 +137,10 @@ def get_greeting() -> str:
                 "not named a destination yet.",
     tags={"bundle", "esim", "esim hub", "travel", "roaming"}
 )
-async def get_all_bundles(ctx: Context) -> List[Bundle]:
+async def get_all_bundles() -> List[Bundle]:
     """Fetch all bundles from the Esim Hub."""
-    api_key = get_token(ctx=ctx)
     from config.utils import esim_hub_service_instance
-    service = esim_hub_service_instance(api_key=api_key)
+    service = esim_hub_service_instance()
     bundles = await service.get_all_bundles()
     # Ensure JSON-serializable return:
     # If Bundle is Pydantic v2:
@@ -161,12 +155,10 @@ async def get_all_bundles(ctx: Context) -> List[Bundle]:
                 "'internet for my Japan trip', 'roaming in Guam'.",
     tags={"bundle", "esim", "esim hub", "search", "travel", "roaming"}
 )
-async def search_bundles(ctx: Context, keyword: str = None) -> List[Bundle]:
+async def search_bundles(keyword: str = None) -> List[Bundle]:
     """Search for bundles matching the given keyword and optional filters."""
-    api_key = get_token(ctx=ctx)
-
     from config.utils import esim_hub_service_instance
-    service = esim_hub_service_instance(api_key=api_key)
+    service = esim_hub_service_instance()
     return await service.search_bundles(search_keyword=keyword, country_name=None, gprs_from=None,
                                         gprs_to=None, currency_code=None, validity=None)
 
@@ -177,10 +169,8 @@ async def search_bundles(ctx: Context, keyword: str = None) -> List[Bundle]:
                 "link before the bundle can be purchased with purchase_bundle_and_send_activation.",
     tags={"bundle", "esim", "payment", "stripe"}
 )
-async def create_payment_link(ctx: Context, bundle_code: str, user_email: str) -> dict:
+async def create_payment_link(bundle_code: str, user_email: str) -> dict:
     """Create a Stripe Checkout payment link for the given bundle, priced from the eSIM Hub."""
-    api_key = get_token(ctx=ctx)
-
     from config.utils import esim_hub_service_instance
     from email_validator import validate_email, EmailNotValidError
 
@@ -189,7 +179,7 @@ async def create_payment_link(ctx: Context, bundle_code: str, user_email: str) -
     except EmailNotValidError as e:
         return {"success": False, "error": f"Invalid email: {str(e)}"}
 
-    service = esim_hub_service_instance(api_key=api_key)
+    service = esim_hub_service_instance()
     bundle = await service.get_bundle_by_code(bundle_code)
     if not bundle:
         return {"success": False, "error": f"Bundle {bundle_code} not found."}
@@ -228,10 +218,8 @@ async def create_payment_link(ctx: Context, bundle_code: str, user_email: str) -
                 "create_payment_link, and the payment must already be completed by the user.",
     tags={"bundle", "esim", "purchase", "activation", "email"}
 )
-async def purchase_bundle_and_send_activation(ctx: Context, payment_session_id: str) -> dict:
+async def purchase_bundle_and_send_activation(payment_session_id: str) -> dict:
     """Verify the Stripe payment, then purchase the bundle, fetch the activation code, and email it."""
-    api_key = get_token(ctx=ctx)
-
     from config.utils import esim_hub_service_instance
 
     # 0) Verify the payment: the bundle and email come from the paid session's metadata,
@@ -255,7 +243,7 @@ async def purchase_bundle_and_send_activation(ctx: Context, payment_session_id: 
     if not bundle_code or not user_email:
         return {"success": False, "error": "Payment session is missing bundle/email metadata."}
 
-    service = esim_hub_service_instance(api_key=api_key)
+    service = esim_hub_service_instance()
 
     # 1) Create order
     order_result = await service.purchase_bundle(bundle_code, user_email)
@@ -376,12 +364,10 @@ async def send_activation_url_via_email(user_email: str, activation_url: str) ->
                 "previous eSIM purchases, past orders, or an order status.",
     tags={"esim", "order", "history"}
 )
-async def get_order_history(ctx: Context, user_email: str) -> List[dict]:
+async def get_order_history(user_email: str) -> List[dict]:
     """Get order history for a given user email."""
-    api_key = get_token(ctx=ctx)
-
     from config.utils import esim_hub_service_instance
-    service = esim_hub_service_instance(api_key=api_key)
+    service = esim_hub_service_instance()
     return await service.get_order_history(user_email)
 
 

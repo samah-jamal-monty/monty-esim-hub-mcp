@@ -10,6 +10,7 @@ services:
     envVars:
       - key: ESIM_DIGITAL_SERVICE_URL
       - key: ESIM_MM_HUB_API_URL
+      - key: ESIM_HUB_API_KEY
       - key: ESIM_HUB_TENANT_KEY
       - key: MCP_BASE_URL
       - key: STRIPE_SK_KEY

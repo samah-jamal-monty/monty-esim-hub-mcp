@@ -50,7 +50,7 @@
         </mxCell>
 
         <!-- ===== Top note ===== -->
-        <mxCell id="note1" value="Connected via OAuth pass-through — bearer token = user&#39;s mm-hub API key" style="shape=note;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;size=14;" vertex="1" parent="1">
+        <mxCell id="note1" value="No client auth — the server reads the mm-hub API key from the ESIM_HUB_API_KEY env var" style="shape=note;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;size=14;" vertex="1" parent="1">
           <mxGeometry x="270" y="100" width="440" height="36" as="geometry" />
         </mxCell>
 
@@ -61,7 +61,7 @@
         <mxCell id="m2" value="2. search_bundles(keyword)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry"><mxPoint x="340" y="210" as="sourcePoint" /><mxPoint x="640" y="210" as="targetPoint" /></mxGeometry>
         </mxCell>
-        <mxCell id="m3" value="3. search catalog (Api-Key = bearer token)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
+        <mxCell id="m3" value="3. search catalog (Api-Key from env)" style="html=1;verticalAlign=bottom;endArrow=block;fontSize=11;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry"><mxPoint x="640" y="250" as="sourcePoint" /><mxPoint x="1220" y="250" as="targetPoint" /></mxGeometry>
         </mxCell>
         <mxCell id="m4" value="4. matching bundles" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontSize=11;" edge="1" parent="1">

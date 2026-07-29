@@ -14,7 +14,7 @@
           <mxGeometry x="135" y="50" width="40" height="70" as="geometry" />
         </mxCell>
 
-        <mxCell id="claudeBox" value="&lt;b&gt;Claude Desktop / claude.ai&lt;/b&gt;&lt;br&gt;MCP client (custom connector)&lt;br&gt;Advanced settings:&lt;br&gt;Client ID = any · Client Secret = mm-hub API key" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="claudeBox" value="&lt;b&gt;Claude Desktop / claude.ai&lt;/b&gt;&lt;br&gt;MCP client (custom connector)&lt;br&gt;no credentials required" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="40" y="200" width="230" height="110" as="geometry" />
         </mxCell>
 
@@ -31,11 +31,11 @@
           <mxGeometry x="360" y="30" width="640" height="840" as="geometry" />
         </mxCell>
 
-        <mxCell id="mcpBox" value="&lt;b&gt;MCP Transport&lt;/b&gt;&lt;br&gt;POST /mcp (streamable HTTP)&lt;br&gt;Bearer token = mm-hub API key&lt;br&gt;(pass-through; mm hub is the&lt;br&gt;real gatekeeper)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="mcpBox" value="&lt;b&gt;MCP Transport&lt;/b&gt;&lt;br&gt;POST /mcp (streamable HTTP)&lt;br&gt;no client auth — the mm-hub&lt;br&gt;API key comes from the server&lt;br&gt;environment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="390" y="100" width="280" height="160" as="geometry" />
         </mxCell>
 
-        <mxCell id="oauthBox" value="&lt;b&gt;OAuth 2.1 Authorization Server&lt;/b&gt;&lt;br&gt;EsimHubOAuthProvider (pass-through)&lt;br&gt;/.well-known metadata · /authorize&lt;br&gt;(auto-approve, PKCE) · /token&lt;br&gt;access token = Client Secret&lt;br&gt;= user&#39;s mm-hub API key" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="oauthBox" value="&lt;b&gt;Configuration (env vars)&lt;/b&gt;&lt;br&gt;ESIM_HUB_API_KEY (mm-hub API key)&lt;br&gt;ESIM_HUB_TENANT_KEY&lt;br&gt;ESIM_MM_HUB_API_URL ·&lt;br&gt;ESIM_DIGITAL_SERVICE_URL&lt;br&gt;STRIPE_SK_KEY · SMTP_*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="700" y="100" width="270" height="160" as="geometry" />
         </mxCell>
 
@@ -55,12 +55,12 @@
           <mxGeometry x="700" y="500" width="270" height="150" as="geometry" />
         </mxCell>
 
-        <mxCell id="utilsBox" value="&lt;b&gt;config/utils&lt;/b&gt;&lt;br&gt;• QR code generator&lt;br&gt;• SMTP email sender&lt;br&gt;• get_token (bearer pass-through)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="utilsBox" value="&lt;b&gt;config/utils&lt;/b&gt;&lt;br&gt;• QR code generator&lt;br&gt;• SMTP email sender&lt;br&gt;• service factory (API key from env)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="700" y="690" width="270" height="120" as="geometry" />
         </mxCell>
 
         <!-- ============ RIGHT: EXTERNAL SYSTEMS ============ -->
-        <mxCell id="legendBox" value="&lt;b&gt;Key design points&lt;/b&gt;&lt;br&gt;• Multi-tenant pass-through auth: the OAuth Client Secret a user types IS their mm-hub API key; no keys stored server-side&lt;br&gt;• Payment-first: reseller order is created only after the Stripe session is paid&lt;br&gt;• Bundle + email are read from the paid session&#39;s metadata (order always matches payment)&lt;br&gt;• Short /pay links avoid truncated Stripe URLs in chat" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;spacingRight=6;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="legendBox" value="&lt;b&gt;Key design points&lt;/b&gt;&lt;br&gt;• Single-tenant: the mm-hub API key is read from the ESIM_HUB_API_KEY env var on the server; the MCP client needs no credentials&lt;br&gt;• Payment-first: reseller order is created only after the Stripe session is paid&lt;br&gt;• Bundle + email are read from the paid session&#39;s metadata (order always matches payment)&lt;br&gt;• Short /pay links avoid truncated Stripe URLs in chat" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;spacingRight=6;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="1120" y="50" width="300" height="250" as="geometry" />
         </mxCell>
 
@@ -81,16 +81,7 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="e2" value="2. OAuth connect (DCR disabled,&#10;secret carried through)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="claudeBox" target="oauthBox">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="155" y="70" />
-              <mxPoint x="835" y="70" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-
-        <mxCell id="e3" value="3. MCP tool calls&#10;(Bearer = mm-hub API key)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="claudeBox" target="mcpBox">
+        <mxCell id="e3" value="2. MCP tool calls&#10;(no auth headers)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="claudeBox" target="mcpBox">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
@@ -115,15 +106,15 @@
           </mxGeometry>
         </mxCell>
 
-        <mxCell id="eStripeSvcExt" value="5. create Checkout Session&#10;9a. verify paid + stamp order id" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="stripeSvcBox" target="stripeExt">
+        <mxCell id="eStripeSvcExt" value="4. create Checkout Session&#10;8a. verify paid + stamp order id" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="stripeSvcBox" target="stripeExt">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="eHubSvcExt" value="4. search catalog / get-by-code&#10;9b. create order + activation code" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="hubSvcBox" target="hubExt">
+        <mxCell id="eHubSvcExt" value="3. search catalog / get-by-code&#10;8b. create order + activation code" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="hubSvcBox" target="hubExt">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="eBrowserRoutes" value="6. GET /pay/{session_id}&#10;(short chat-safe link)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="browserBox" target="routesBox">
+        <mxCell id="eBrowserRoutes" value="5. GET /pay/{session_id}&#10;(short chat-safe link)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="browserBox" target="routesBox">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="330" y="475" />
@@ -132,7 +123,7 @@
           </mxGeometry>
         </mxCell>
 
-        <mxCell id="eBrowserStripe" value="7. 302 → Stripe Checkout · user pays" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;dashed=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.9;entryDx=0;entryDy=0;" edge="1" parent="1" source="browserBox" target="stripeExt">
+        <mxCell id="eBrowserStripe" value="6. 302 → Stripe Checkout · user pays" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;dashed=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.9;entryDx=0;entryDy=0;" edge="1" parent="1" source="browserBox" target="stripeExt">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="97" y="845" />
@@ -142,7 +133,7 @@
           </mxGeometry>
         </mxCell>
 
-        <mxCell id="eWebhook" value="8. webhook: checkout.session.completed&#10;(Stripe-Signature verified)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;dashed=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="stripeExt" target="routesBox">
+        <mxCell id="eWebhook" value="7. webhook: checkout.session.completed&#10;(Stripe-Signature verified)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;dashed=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="stripeExt" target="routesBox">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1030" y="507" />
@@ -152,7 +143,7 @@
           </mxGeometry>
         </mxCell>
 
-        <mxCell id="eUtilsSmtp" value="10. activation email + QR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="utilsBox" target="smtpExt">
+        <mxCell id="eUtilsSmtp" value="9. activation email + QR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="utilsBox" target="smtpExt">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
