@@ -118,7 +118,9 @@ def user_journey() -> str:
         "with the payment_session_id from step 5 to complete the purchase and email the activation details. "
         "If it reports the payment is not completed yet, ask the user to finish paying and try again.\n"
         "7) Confirm to the user that the activation details have been sent to his email.\n"
-        "8) User can also ask for his order history by providing his email (use get_order_history tool).\n"
+        "8) User can also ask for his order history by providing his email: first use "
+        "request_order_history_otp to email him a verification code, ask him for the 6-digit code, "
+        "then use get_order_history with his email and the code to show the history.\n"
         "Always ensure to validate user inputs and handle errors gracefully. "
         "Never call purchase_bundle_and_send_activation without a paid payment session."
     )
@@ -359,16 +361,72 @@ async def send_activation_url_via_email(user_email: str, activation_url: str) ->
 
 
 @mcp.tool(
-    name="get_order_history",
-    description="Get the user's eSIM order history by email. Use when the user asks about their "
-                "previous eSIM purchases, past orders, or an order status.",
-    tags={"esim", "order", "history"}
+    name="request_order_history_otp",
+    description="Step 1 of viewing order history: send a one-time verification code to the "
+                "user's email. Use when the user asks about their previous eSIM purchases, "
+                "past orders, or an order status. After calling this, ask the user for the "
+                "6-digit code they received, then call get_order_history with it.",
+    tags={"esim", "order", "history", "otp"}
 )
-async def get_order_history(user_email: str) -> List[dict]:
-    """Get order history for a given user email."""
+async def request_order_history_otp(user_email: str) -> dict:
+    """Generate an OTP for the email and send it, so the order history can be unlocked."""
+    from services import otp_service
+    try:
+        from email_validator import validate_email
+        user_email = validate_email(user_email, check_deliverability=False).normalized
+    except Exception:
+        return {"success": False, "error": "Invalid email address."}
+
+    code = otp_service.generate_otp(user_email)
+    if code is None:
+        return {
+            "success": True,
+            "message": "A code was already sent recently. Ask the user to check their inbox, "
+                       "or to wait a minute before requesting a new one.",
+        }
+    subject = "Your eSIM order history verification code"
+    body = (
+        f"Dear User,<br><br>Your verification code is: <b>{code}</b><br><br>"
+        f"It expires in 5 minutes. If you did not request your eSIM order history, "
+        f"you can ignore this email.<br><br>Best regards,<br>eSIM Support Team"
+    )
+    try:
+        _send_email_in_background(subject=subject, html_content=body, recipients=user_email)
+    except Exception:
+        return {"success": False, "error": "Failed to send the verification email."}
+    return {
+        "success": True,
+        "message": "Verification code sent. Ask the user for the 6-digit code from their email, "
+                   "then call get_order_history with the email and the code.",
+    }
+
+
+@mcp.tool(
+    name="get_order_history",
+    description="Step 2 of viewing order history: verify the 6-digit code that was emailed to "
+                "the user via request_order_history_otp and, if valid, return their eSIM order "
+                "history. Never call this without a code obtained from the user.",
+    tags={"esim", "order", "history", "otp"}
+)
+async def get_order_history(user_email: str, otp_code: str) -> dict:
+    """Verify the OTP and return the order history for the email."""
     from config.utils import esim_hub_service_instance
+    from services import otp_service
+    try:
+        from email_validator import validate_email
+        user_email = validate_email(user_email, check_deliverability=False).normalized
+    except Exception:
+        return {"success": False, "error": "Invalid email address."}
+
+    if not otp_service.verify_otp(user_email, otp_code):
+        return {
+            "success": False,
+            "error": "Invalid or expired verification code. Ask the user to re-check the code, "
+                     "or use request_order_history_otp to send a new one.",
+        }
     service = esim_hub_service_instance()
-    return await service.get_order_history(user_email)
+    orders = await service.get_order_history(user_email)
+    return {"success": True, "orders": orders}
 
 
 if __name__ == "__main__":
