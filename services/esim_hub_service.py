@@ -60,7 +60,7 @@ class EsimHubService:
             "CurrencyCode": "USD",
         }
         async with httpx.AsyncClient() as client:
-            response = await client.get(url=url, headers=self.__headers, params=params)
+            response = await client.get(url=url, headers=self.__headers, params=params, timeout=60)
         if response.status_code == 200:
             data = response.json()
             return [DtoMapper.to_bundle(item) for item in data["data"]["items"]]
@@ -84,7 +84,7 @@ class EsimHubService:
         return response.json().get("data", {}).get("item")
 
     async def purchase_bundle(self, bundle_code: str, user_email: str) -> dict:
-        if not self.check_bundle_applicability(bundle_code):
+        if not await self.check_bundle_applicability(bundle_code):
             return {"success": False, "error": "Bundle not available for purchase"}
         url = f"{self.__mm_hub_url}{EsimHubEndpoint.API_CREATE_RESELLER_ORDER}"
         request_body = {
@@ -117,7 +117,7 @@ class EsimHubService:
         }
         logger.info(f"getting activation code for order {order_id} at {url}")
         async with httpx.AsyncClient() as client:
-            response = await client.get(url=url, headers=self.__headers, params=params)
+            response = await client.get(url=url, headers=self.__headers, params=params, timeout=60)
             logger.info(f"response: {response.status_code} {response.text}")
         if response.status_code != 200:
             logger.error(f"Failed to get activation code for order {order_id}: {response.status_code} {response.text}")
@@ -135,7 +135,7 @@ class EsimHubService:
             "pageSize": page_size,
         }
         async with httpx.AsyncClient() as client:
-            response = await client.get(url=url, headers=self.__headers, params=params)
+            response = await client.get(url=url, headers=self.__headers, params=params, timeout=60)
         if response.status_code == 200:
             data = response.json()
             return data["data"]["orders"]
@@ -144,17 +144,20 @@ class EsimHubService:
             return []
 
     async def check_bundle_applicability(self, bundle_code: str) -> bool:
+        # The availability endpoint expects the bundle's externalId, not its record GUID
+        bundle = await self.get_bundle_by_code(bundle_code)
+        if bundle is None or not bundle.get("externalId"):
+            logger.error(f"Bundle {bundle_code} not found, cannot check availability")
+            return False
         url = f"{self.__mm_hub_url}{EsimHubEndpoint.API_CHECK_BUNDLE_APPLICABLE}"
         logger.info(f"checking bundle applicability from {url} for bundle {bundle_code}")
         params = {
-            "bundleCode": bundle_code,
+            "bundleCode": bundle["externalId"],
         }
         async with httpx.AsyncClient() as client:
-            response = await client.get(url=url, headers=self.__headers, params=params)
+            response = await client.get(url=url, headers=self.__headers, params=params, timeout=60)
         if response.status_code == 200:
-            if "success" not in response:
-                return False
-            return True
+            return bool(response.json().get("success"))
         else:
             logger.error(f"Failed to check bundle applicability: {response.status_code} {response.text}")
             return False
